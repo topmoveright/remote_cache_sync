@@ -18,6 +18,8 @@ void main(List<String> args) async {
   var destDir = Directory('${cwd.path}/web');
   String? wasmPath;
   var release = false;
+  var keepBuild = false;
+  var compiler = 'auto'; // auto | dart2js | build_runner
 
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
@@ -30,6 +32,12 @@ void main(List<String> args) async {
         break;
       case '--release':
         release = true;
+        break;
+      case '--keep-build':
+        keepBuild = true;
+        break;
+      case '--compiler':
+        compiler = args[++i];
         break;
       case '-h':
       case '--help':
@@ -75,21 +83,23 @@ void main(List<String> args) async {
     }
   }
 
-  // Run build_runner to compile worker
-  stdout.writeln('> Building web/worker.dart (${release ? 'release' : 'debug'})');
-  final outDir = Directory('build/web');
-  final argsBuild = [
-    'run',
-    'build_runner',
-    'build',
-    if (release) '--release',
-    '--delete-conflicting-outputs',
-    '-o',
-    'web:${outDir.path}/',
-  ];
-  await _run('dart', argsBuild, cwd: cwd.path);
-
-  final compiled = File('${outDir.path}/worker.dart.js');
+  // Compile worker with selected compiler
+  stdout.writeln('> Building web/worker.dart (${release ? 'release' : 'debug'}) [compiler: $compiler]');
+  final outDir = await Directory.systemTemp.createTemp('rcs_web_setup_');
+  File compiled;
+  if (compiler == 'dart2js' || compiler == 'auto') {
+    compiled = await _compileWithDart2js(appWebWorkerDart.path, outDir, cwd: cwd.path, release: release);
+    if (!await compiled.exists()) {
+      if (compiler == 'dart2js') {
+        stderr.writeln('ERROR: dart2js compilation failed.');
+        exit(4);
+      }
+      // Fallback to build_runner
+      compiled = await _compileWithBuildRunner(outDir, cwd: cwd.path, release: release);
+    }
+  } else {
+    compiled = await _compileWithBuildRunner(outDir, cwd: cwd.path, release: release);
+  }
   if (!await compiled.exists()) {
     stderr.writeln('ERROR: Compiled worker not found at ${compiled.path}');
     exit(3);
@@ -104,11 +114,22 @@ void main(List<String> args) async {
 
   stdout
       .writeln('Done. Synced to: $appWebDir\n  - ${workerOut.path}\n  - $appWebDir/sqlite3.wasm');
+
+  // Clean temporary build outputs unless asked to keep them
+  if (!keepBuild) {
+    try {
+      await outDir.delete(recursive: true);
+    } catch (_) {
+      // ignore cleanup errors
+    }
+  } else {
+    stdout.writeln('Kept build outputs at: ${outDir.path} (--keep-build)');
+  }
 }
 
 void _printUsage() {
   stdout.writeln('''
-Usage: dart run remote_cache_sync:web_setup [--dest DEST_DIR] [--wasm SQLITE3_WASM] [--release]
+Usage: dart run remote_cache_sync:web_setup [--dest DEST_DIR] [--wasm SQLITE3_WASM] [--release] [--keep-build] [--compiler auto|dart2js|build_runner]
 
 Examples:
   # Debug build to current project's web/
@@ -116,7 +137,48 @@ Examples:
 
   # Release build to a specific app's web/
   dart run remote_cache_sync:web_setup --release --dest /path/to/app/web --wasm /path/to/sqlite3.wasm
+
+  # Keep temporary build outputs for debugging
+  dart run remote_cache_sync:web_setup --keep-build
+
+  # Force dart2js-only compile of worker
+  dart run remote_cache_sync:web_setup --compiler dart2js
 ''');
+}
+
+Future<File> _compileWithDart2js(String entry, Directory outDir, {required String cwd, required bool release}) async {
+  final outFile = File('${outDir.path}/worker.dart.js');
+  final args = [
+    'compile',
+    'js',
+    if (release) ...['-O4'] else ...['-O1'],
+    '-o',
+    outFile.path,
+    entry,
+  ];
+  try {
+    await _run('dart', args, cwd: cwd);
+  } catch (_) {
+    // Leave it to caller to handle fallback
+  }
+  return outFile;
+}
+
+Future<File> _compileWithBuildRunner(Directory outDir, {required String cwd, required bool release}) async {
+  final argsBuild = [
+    'run',
+    'build_runner',
+    'build',
+    if (release) '--release',
+    '--delete-conflicting-outputs',
+    '--build-filter', 'web/worker.dart.js',
+    '--build-filter', 'web/worker.dart.js.map',
+    '--build-filter', 'web/worker.dart.bootstrap.js',
+    '-o',
+    'web:${outDir.path}/',
+  ];
+  await _run('dart', argsBuild, cwd: cwd);
+  return File('${outDir.path}/worker.dart.js');
 }
 
 Future<void> _run(String exec, List<String> args, {required String cwd}) async {
