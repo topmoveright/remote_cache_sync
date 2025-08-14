@@ -1,10 +1,9 @@
 // Drift database schema and connection setup.
 // This file defines the tables used by the persistent LocalStore and
-// provides a database instance backed by drift_flutter.
+// provides a database instance via platform-conditional connection.
 
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
-import 'package:drift/native.dart' as dn; // For in-memory DB in tests
+import 'connection/connection.dart' as conn; // conditional openConnection
 
 part 'database.g.dart';
 
@@ -54,16 +53,24 @@ class PendingOps extends Table {
 
 @DriftDatabase(tables: [Items, SyncPoints, PendingOps])
 class LocalDriftDatabase extends _$LocalDriftDatabase {
-  LocalDriftDatabase() : super(_openConnection());
+  // Use `super.connect` to pass a DatabaseConnection (works for web/native).
+  LocalDriftDatabase._(super.e);
 
-  // Testing-friendly constructor using an in-memory database.
-  LocalDriftDatabase.forTesting() : super(dn.NativeDatabase.memory());
+  factory LocalDriftDatabase() => LocalDriftDatabase._(conn.openConnection());
+
+  // Testing-friendly factory using platform-appropriate test connection.
+  factory LocalDriftDatabase.forTesting() =>
+      LocalDriftDatabase._(_openConnectionForTesting());
 
   @override
   int get schemaVersion => 1;
 }
 
-QueryExecutor _openConnection() {
-  // Lifts platform-specific initialization automatically.
-  return driftDatabase(name: 'remote_cache_sync.db');
+DatabaseConnection _openConnectionForTesting() {
+  // Use testing variant when available; falls back to normal connection.
+  try {
+    return (conn.openConnectionForTesting)();
+  } catch (_) {
+    return conn.openConnection();
+  }
 }

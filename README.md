@@ -7,6 +7,74 @@ For backend-specific schema/indexing, permissions, and server time setup, see:
 - [PocketBase Backend Guide](doc/backend_guides/pocketbase.md)
 - [Supabase Backend Guide](doc/backend_guides/supabase.md)
 
+## Flutter Web (Drift WASM)
+
+This package supports Drift on Flutter Web via SQLite WASM using a web worker.
+
+• __Connection expectations__
+  - `lib/sync/drift/connection/connection_web.dart` uses `WasmDatabase.open()` and expects at runtime:
+    - `web/sqlite3.wasm`
+    - `web/worker.dart.js` (debug) or `web/worker.dart.min.js` (release)
+
+• __One-time setup in your app__
+  - Add dev deps to your app: `build_runner`, `build_web_compilers`.
+  - No manual worker JS download is required.
+
+• __Build & Sync via Dart CLI (recommended)__
+```bash
+# Debug build to ./web
+dart run remote_cache_sync:web_setup
+
+# Release build to ./web
+dart run remote_cache_sync:web_setup --release
+
+# Custom destination / wasm path
+dart run remote_cache_sync:web_setup \
+  --dest /absolute/path/to/your_app/web \
+  --wasm /absolute/path/to/sqlite3.wasm \
+  --release
+```
+
+This compiles `web/worker.dart` (creating a minimal one if missing) and copies `sqlite3.wasm` to your app's `web/`. The connection code expects `worker.dart.js` (debug) or `worker.dart.min.js` (release) at the web root.
+
+• __Run on web__
+```bash
+flutter run -d chrome
+```
+
+If the browser lacks certain APIs (e.g., OPFS in private mode), Drift will fall back to a different implementation. We log `missingFeatures` and `chosenImplementation` in `connection_web.dart` for diagnostics.
+
+### CI example (GitHub Actions)
+```yaml
+name: web-build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Prepare WASM & worker (release)
+        run: dart run remote_cache_sync:web_setup --release
+
+      - name: Build Web
+        run: flutter build web --release
+```
+
 ## Usage & Testing
 
 - Usage: [Interfaces and Usage Patterns](doc/usage/interfaces.md)
