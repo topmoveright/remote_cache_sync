@@ -32,7 +32,8 @@ class SupabaseRemoteConfig<T, Id> {
 
   /// Optional hook to expose parse statistics for testing/observability.
   /// Called after parsePage completes with the number of skipped rows and total rows.
-  final void Function({required int skipped, required int total})? onParsePageStats;
+  final void Function({required int skipped, required int total})?
+  onParsePageStats;
 
   /// Optional RPC name to fetch authoritative server time (UTC).
   /// If null, falls back to client-side time (not recommended).
@@ -156,7 +157,9 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
         .contains(config.scopeKeysColumn, scope.keys);
     if (since != null) {
       upsertQuery = upsertQuery.gt(
-          config.updatedAtColumn, since.toUtc().toIso8601String());
+        config.updatedAtColumn,
+        since.toUtc().toIso8601String(),
+      );
     }
     if (config.deletedAtColumn != null) {
       // `is` operator to check for NULL
@@ -175,8 +178,7 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
           .eq(config.scopeNameColumn, scope.name)
           .contains(config.scopeKeysColumn, scope.keys);
       if (since != null) {
-        delQ = delQ.gt(
-            config.updatedAtColumn, since.toUtc().toIso8601String());
+        delQ = delQ.gt(config.updatedAtColumn, since.toUtc().toIso8601String());
       }
       delQ = delQ.not(config.deletedAtColumn!, 'is', null);
       final delsRaw = await delQ;
@@ -186,13 +188,19 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
     }
 
     final serverTs = await getServerTime();
-    return Delta<T, Id>(upserts: upserts, deletes: deletes, serverTimestamp: serverTs);
+    return Delta<T, Id>(
+      upserts: upserts,
+      deletes: deletes,
+      serverTimestamp: serverTs,
+    );
   }
 
   /// Filter raw rows (maps) by scope equality.
   /// Uses shallow map equality on scope keys to avoid reference equality pitfalls.
   List<Map<String, dynamic>> filterRowsByScope(
-      List<Map<String, dynamic>> rows, SyncScope scope) {
+    List<Map<String, dynamic>> rows,
+    SyncScope scope,
+  ) {
     bool shallowMapEquals(Map a, Map b) {
       if (a.length != b.length) return false;
       for (final k in a.keys) {
@@ -205,24 +213,40 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
     return rows.where((m) {
       final nameOk = m[config.scopeNameColumn] == scope.name;
       final keysVal = m[config.scopeKeysColumn];
-      final keysOk = keysVal is Map &&
+      final keysOk =
+          keysVal is Map &&
           shallowMapEquals(Map<String, dynamic>.from(keysVal), scope.keys);
       return nameOk && keysOk;
     }).toList();
   }
 
   /// Parse a page of raw rows into upserts and deletes with defensive checks.
-  (List<T> upserts, List<Id> deletes) parsePage(List<Map<String, dynamic>> rows) {
+  (List<T> upserts, List<Id> deletes) parsePage(
+    List<Map<String, dynamic>> rows,
+  ) {
     final upserts = <T>[];
     final deletes = <Id>[];
     var skipped = 0;
     for (final m in rows) {
-      if (!m.containsKey(config.idColumn)) { skipped++; continue; }
-      if (!m.containsKey(config.scopeNameColumn)) { skipped++; continue; }
-      if (!m.containsKey(config.scopeKeysColumn)) { skipped++; continue; }
+      if (!m.containsKey(config.idColumn)) {
+        skipped++;
+        continue;
+      }
+      if (!m.containsKey(config.scopeNameColumn)) {
+        skipped++;
+        continue;
+      }
+      if (!m.containsKey(config.scopeKeysColumn)) {
+        skipped++;
+        continue;
+      }
       final idRaw = m[config.idColumn];
-      if (idRaw is! String) { skipped++; continue; }
-      final isDeleted = config.deletedAtColumn != null && m[config.deletedAtColumn!] != null;
+      if (idRaw is! String) {
+        skipped++;
+        continue;
+      }
+      final isDeleted =
+          config.deletedAtColumn != null && m[config.deletedAtColumn!] != null;
       if (isDeleted) {
         deletes.add(config.idFromString(idRaw));
       } else {
@@ -257,7 +281,11 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
       deletes.addAll(dels);
     }
     final serverTs = await getServerTime();
-    return Delta<T, Id>(upserts: upserts, deletes: deletes, serverTimestamp: serverTs);
+    return Delta<T, Id>(
+      upserts: upserts,
+      deletes: deletes,
+      serverTimestamp: serverTs,
+    );
   }
 
   @override
@@ -278,7 +306,7 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
         if (idsForScope.isEmpty) continue;
         if (config.deletedAtColumn != null) {
           var q = _table().update({
-            config.deletedAtColumn!: DateTime.now().toUtc().toIso8601String()
+            config.deletedAtColumn!: DateTime.now().toUtc().toIso8601String(),
           });
           final s = entry.key;
           if (s != null) {
@@ -305,7 +333,7 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
     final idList = ids.map(config.idToString).toList(growable: false);
     if (config.deletedAtColumn != null) {
       var q = _table().update({
-        config.deletedAtColumn!: DateTime.now().toUtc().toIso8601String()
+        config.deletedAtColumn!: DateTime.now().toUtc().toIso8601String(),
       });
       if (config.injectScopeOnWrite && config.defaultScope != null) {
         q = q
@@ -324,12 +352,10 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
     }
   }
 
-  Map<String, dynamic> _scopeColsFor(SyncScope s) => config.scopeColumnsBuilder != null
+  Map<String, dynamic> _scopeColsFor(SyncScope s) =>
+      config.scopeColumnsBuilder != null
       ? config.scopeColumnsBuilder!(s)
-      : {
-          config.scopeNameColumn: s.name,
-          config.scopeKeysColumn: s.keys,
-        };
+      : {config.scopeNameColumn: s.name, config.scopeKeysColumn: s.keys};
 
   /// Build upsert rows with optional scope injection. Exposed for tests.
   List<Map<String, dynamic>> buildUpsertRows(List<T> items) {

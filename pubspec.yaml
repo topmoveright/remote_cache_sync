@@ -1,7 +1,24 @@
 name: remote_cache_sync
 description: "Remote cache synchronization toolkit for Flutter with Appwrite, PocketBase, and Supabase adapters."
-version: 0.1.0
-homepage: https://github.com/topmoveright/remote_cache_sync
+version: 0.1.1
+homepage: https://topmoveright.github.io/remote_cache_sync
+repository: https://github.com/topmoveright/remote_cache_sync
+issue_tracker: https://github.com/topmoveright/remote_cache_sync/issues
+documentation: https://topmoveright.github.io/remote_cache_sync
+topics:
+  - cache
+  - sync
+  - drift
+  - wasm
+  - flutter-web
+
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  web:
+  windows:
 
 environment:
   sdk: ^3.8.1
@@ -15,8 +32,8 @@ dependencies:
   drift_flutter: ^0.2.5
   path_provider: ^2.1.5
   supabase_flutter: ^2.6.0
-  appwrite: ^11.0.1
-  pocketbase: ^0.17.0
+  appwrite: ">=11.0.1 <18.0.0"
+  pocketbase: ">=0.17.0 <0.24.0"
 
 dev_dependencies:
   flutter_test:
@@ -25,10 +42,6 @@ dev_dependencies:
   drift_dev: ^2.28.1
   build_runner: ^2.6.0
   build_web_compilers: ^4.2.1
-
-
-flutter:
-
 
 executables:
   web_setup: web_setup

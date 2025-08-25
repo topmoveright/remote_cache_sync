@@ -14,9 +14,10 @@ export 'sync/sync_types.dart';
 // to avoid name clash with domain model `PendingOp<T, Id>`.
 export 'sync/drift/database.dart' hide PendingOp;
 export 'sync/drift/drift_local_store.dart';
-export 'sync/remote/supabase_remote_store.dart';
-export 'sync/remote/appwrite_remote_store.dart';
-export 'sync/remote/pocketbase_remote_store.dart';
+// NOTE: Remote adapters (Supabase/Appwrite/PocketBase) are moved to
+// `remote_cache_sync_adapters.dart` to keep this core entrypoint WASM-safe.
+// Import `package:remote_cache_sync/remote_cache_sync_adapters.dart` explicitly
+// when you need those adapters.
 
 // (duplicate exports removed)
 

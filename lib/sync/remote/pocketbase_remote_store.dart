@@ -37,7 +37,8 @@ class PocketBaseRemoteConfig<T extends HasUpdatedAt, Id> {
   final bool injectScopeOnWrite;
   final Map<String, dynamic> Function(SyncScope scope)? scopeFieldsBuilder;
   // Optional parse stats hook (for testing/observability)
-  final void Function({required int skipped, required int total})? onParsePageStats;
+  final void Function({required int skipped, required int total})?
+  onParsePageStats;
 
   const PocketBaseRemoteConfig({
     required this.client,
@@ -81,18 +82,33 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
   }
 
   // Parse a page of raw rows into upserts and delete ids. Exposed for tests.
-  (List<T> upserts, List<Id> deletes) parsePage(List<Map<String, dynamic>> rows) {
+  (List<T> upserts, List<Id> deletes) parsePage(
+    List<Map<String, dynamic>> rows,
+  ) {
     final upserts = <T>[];
     final deletes = <Id>[];
     var skipped = 0;
     for (final m in rows) {
       // Defensive checks: skip rows without required fields
-      if (!m.containsKey(config.idField)) { skipped++; continue; }
-      if (!m.containsKey(config.scopeNameField)) { skipped++; continue; }
-      if (!m.containsKey(config.scopeKeysField)) { skipped++; continue; }
+      if (!m.containsKey(config.idField)) {
+        skipped++;
+        continue;
+      }
+      if (!m.containsKey(config.scopeNameField)) {
+        skipped++;
+        continue;
+      }
+      if (!m.containsKey(config.scopeKeysField)) {
+        skipped++;
+        continue;
+      }
       final idRaw = m[config.idField];
-      if (idRaw is! String) { skipped++; continue; }
-      final isDeleted = config.deletedAtField != null && m[config.deletedAtField!] != null;
+      if (idRaw is! String) {
+        skipped++;
+        continue;
+      }
+      final isDeleted =
+          config.deletedAtField != null && m[config.deletedAtField!] != null;
       if (isDeleted) {
         deletes.add(config.idFromString(idRaw));
       } else {
@@ -105,18 +121,20 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
 
   // Build PB filter used by fetchSince. Exposed for tests.
   String buildFetchFilter(SyncScope scope, DateTime? since) {
-    final parts = <String>[
-      "${config.scopeNameField}='${scope.name}'",
-    ];
+    final parts = <String>["${config.scopeNameField}='${scope.name}'"];
     if (since != null) {
-      parts.add("${config.updatedAtField}>'${since.toUtc().toIso8601String()}'");
+      parts.add(
+        "${config.updatedAtField}>'${since.toUtc().toIso8601String()}'",
+      );
     }
     return parts.join(' && ');
   }
 
   // Filter raw rows by scope equality. Exposed for tests.
   List<Map<String, dynamic>> filterRowsByScope(
-      List<Map<String, dynamic>> rows, SyncScope scope) {
+    List<Map<String, dynamic>> rows,
+    SyncScope scope,
+  ) {
     bool shallowMapEquals(Map a, Map b) {
       if (a.length != b.length) return false;
       for (final k in a.keys) {
@@ -125,13 +143,13 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
       }
       return true;
     }
+
     return rows.where((m) {
       final nameOk = m[config.scopeNameField] == scope.name;
       final keysVal = m[config.scopeKeysField];
-      final keysOk = keysVal is Map && shallowMapEquals(
-        Map<String, dynamic>.from(keysVal),
-        scope.keys,
-      );
+      final keysOk =
+          keysVal is Map &&
+          shallowMapEquals(Map<String, dynamic>.from(keysVal), scope.keys);
       return nameOk && keysOk;
     }).toList();
   }
@@ -149,10 +167,17 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
     while (true) {
       final list = await config.client
           .collection(config.collection)
-          .getList(page: page, perPage: perPage, filter: filter, sort: config.updatedAtField);
+          .getList(
+            page: page,
+            perPage: perPage,
+            filter: filter,
+            sort: config.updatedAtField,
+          );
       for (final rec in list.items) {
         final data = Map<String, dynamic>.from(rec.data);
-        final isDeleted = config.deletedAtField != null && data[config.deletedAtField!] != null;
+        final isDeleted =
+            config.deletedAtField != null &&
+            data[config.deletedAtField!] != null;
         if (isDeleted) {
           final did = config.idFromString(data[config.idField] as String);
           deletes.add(did);
@@ -165,7 +190,11 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
     }
 
     final serverTs = await getServerTime();
-    return Delta<T, Id>(upserts: upserts, deletes: deletes, serverTimestamp: serverTs);
+    return Delta<T, Id>(
+      upserts: upserts,
+      deletes: deletes,
+      serverTimestamp: serverTs,
+    );
   }
 
   // Test-only: simulate fetchSince using raw pages without SDK.
@@ -193,7 +222,11 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
       deletes.addAll(dels);
     }
     final serverTs = await getServerTime();
-    return Delta<T, Id>(upserts: upserts, deletes: deletes, serverTimestamp: serverTs);
+    return Delta<T, Id>(
+      upserts: upserts,
+      deletes: deletes,
+      serverTimestamp: serverTs,
+    );
   }
 
   @override
@@ -227,15 +260,21 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
             .collection(config.collection)
             .getFirstListItem("${config.idField}='$idStr'");
         if (soft) {
-          final patch = <String, dynamic>{config.deletedAtField!: DateTime.now().toUtc().toIso8601String()};
+          final patch = <String, dynamic>{
+            config.deletedAtField!: DateTime.now().toUtc().toIso8601String(),
+          };
           if (config.injectScopeOnWrite && config.defaultScope != null) {
-            final scopeMap = config.scopeFieldsBuilder?.call(config.defaultScope!) ?? {
-              config.scopeNameField: config.defaultScope!.name,
-              config.scopeKeysField: config.defaultScope!.keys,
-            };
+            final scopeMap =
+                config.scopeFieldsBuilder?.call(config.defaultScope!) ??
+                {
+                  config.scopeNameField: config.defaultScope!.name,
+                  config.scopeKeysField: config.defaultScope!.keys,
+                };
             patch.addAll(scopeMap);
           }
-          await config.client.collection(config.collection).update(rec.id, body: patch);
+          await config.client
+              .collection(config.collection)
+              .update(rec.id, body: patch);
         } else {
           await config.client.collection(config.collection).delete(rec.id);
         }
@@ -249,7 +288,10 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
   Future<DateTime> getServerTime() async {
     if (config.serverTimeEndpoint != null) {
       try {
-        final res = await config.client.send(config.serverTimeEndpoint!, method: 'GET');
+        final res = await config.client.send(
+          config.serverTimeEndpoint!,
+          method: 'GET',
+        );
         final body = (res.bodyString ?? '').trim();
         if (body.isNotEmpty) {
           return DateTime.parse(body).toUtc();
@@ -268,10 +310,12 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
       final idStr = config.idToString(config.idOf(item));
       final data = Map<String, dynamic>.from(config.toJson(item));
       if (config.injectScopeOnWrite && config.defaultScope != null) {
-        final scopeMap = config.scopeFieldsBuilder?.call(config.defaultScope!) ?? {
-          config.scopeNameField: config.defaultScope!.name,
-          config.scopeKeysField: config.defaultScope!.keys,
-        };
+        final scopeMap =
+            config.scopeFieldsBuilder?.call(config.defaultScope!) ??
+            {
+              config.scopeNameField: config.defaultScope!.name,
+              config.scopeKeysField: config.defaultScope!.keys,
+            };
         data.addAll(scopeMap);
       }
       list.add((idStr, data));

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_cache_sync/remote_cache_sync.dart';
+import 'package:remote_cache_sync/remote_cache_sync_adapters.dart';
 import 'package:appwrite/appwrite.dart' as aw;
 
 class _Rec implements HasUpdatedAt {
@@ -49,93 +50,140 @@ void main() {
         ),
         defaultScope: const SyncScope('records', {'userId': 'u1'}),
         injectScopeOnWrite: true,
-        scopeFieldsBuilder: (s) => {
-          'scope_name': s.name,
-          'scope_keys': s.keys,
-        },
+        scopeFieldsBuilder: (s) => {'scope_name': s.name, 'scope_keys': s.keys},
       );
       store = AppwriteRemoteStore<_Rec, String>(config: config);
     });
 
-  group('AppwriteRemoteStore fetchSince integration (raw pages)', () {
-    late int skippedAcc;
-    late AppwriteRemoteStore<_Rec, String> storeWithHook;
-    setUp(() {
-      skippedAcc = 0;
-      storeWithHook = AppwriteRemoteStore<_Rec, String>(
-        config: AppwriteRemoteConfig<_Rec, String>(
-          databases: _FakeDatabases(),
-          functions: null,
-          databaseId: 'db',
-          collectionId: 'col',
-          idField: 'id',
-          updatedAtField: 'updated_at',
-          deletedAtField: 'deleted_at',
-          scopeNameField: 'scope_name',
-          scopeKeysField: 'scope_keys',
-          idOf: (r) => r.id,
-          idToString: (s) => s,
-          idFromString: (s) => s,
-          toJson: (r) => {
-            'id': r.id,
-            'title': r.title,
-            'updated_at': r.updatedAt.toIso8601String(),
-          },
-          fromJson: (m) => _Rec(
-            m['id'] as String,
-            m['title'] as String,
-            DateTime.parse(m['updated_at'] as String).toUtc(),
+    group('AppwriteRemoteStore fetchSince integration (raw pages)', () {
+      late int skippedAcc;
+      late AppwriteRemoteStore<_Rec, String> storeWithHook;
+      setUp(() {
+        skippedAcc = 0;
+        storeWithHook = AppwriteRemoteStore<_Rec, String>(
+          config: AppwriteRemoteConfig<_Rec, String>(
+            databases: _FakeDatabases(),
+            functions: null,
+            databaseId: 'db',
+            collectionId: 'col',
+            idField: 'id',
+            updatedAtField: 'updated_at',
+            deletedAtField: 'deleted_at',
+            scopeNameField: 'scope_name',
+            scopeKeysField: 'scope_keys',
+            idOf: (r) => r.id,
+            idToString: (s) => s,
+            idFromString: (s) => s,
+            toJson: (r) => {
+              'id': r.id,
+              'title': r.title,
+              'updated_at': r.updatedAt.toIso8601String(),
+            },
+            fromJson: (m) => _Rec(
+              m['id'] as String,
+              m['title'] as String,
+              DateTime.parse(m['updated_at'] as String).toUtc(),
+            ),
+            onParsePageStats: ({required int skipped, required int total}) {
+              // Accumulate skipped count from parsePage. 'total' is ignored in this test.
+              skippedAcc += skipped;
+            },
           ),
-          onParsePageStats: ({required int skipped, required int total}) {
-            // Accumulate skipped count from parsePage. 'total' is ignored in this test.
-            skippedAcc += skipped;
-          },
-        ),
-      );
-    });
+        );
+      });
 
-    test('aggregates pages with since and scope filters applied', () async {
-      const scope = SyncScope('records', {'userId': 'u1'});
-      final t0 = DateTime.utc(2024, 5, 1, 0, 0, 0);
-      final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
-      final t2 = DateTime.utc(2024, 5, 1, 0, 0, 2);
-      final pages = <List<Map<String, dynamic>>>[
-        [
-          // older than since -> excluded
-          {'id': 'a', 'title': 'A', 'updated_at': t0.toIso8601String(), 'scope_name': 'records', 'scope_keys': {'userId': 'u1'}},
-          // mismatched scope -> excluded
-          {'id': 'x', 'title': 'X', 'updated_at': t1.toIso8601String(), 'scope_name': 'other', 'scope_keys': {'userId': 'u1'}},
-        ],
-        [
-          // upsert
-          {'id': 'b', 'title': 'B', 'updated_at': t1.toIso8601String(), 'scope_name': 'records', 'scope_keys': {'userId': 'u1'}},
-          // delete
-          {'id': 'c', 'title': 'C', 'updated_at': t2.toIso8601String(), 'deleted_at': t2.toIso8601String(), 'scope_name': 'records', 'scope_keys': {'userId': 'u1'}},
-        ],
-      ];
-      final delta = await storeWithHook.fetchSinceFromRawPages(scope, t0, pages);
-      expect(delta.upserts.map((e) => e.id), ['b']);
-      expect(delta.deletes, ['c']);
-    });
+      test('aggregates pages with since and scope filters applied', () async {
+        const scope = SyncScope('records', {'userId': 'u1'});
+        final t0 = DateTime.utc(2024, 5, 1, 0, 0, 0);
+        final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
+        final t2 = DateTime.utc(2024, 5, 1, 0, 0, 2);
+        final pages = <List<Map<String, dynamic>>>[
+          [
+            // older than since -> excluded
+            {
+              'id': 'a',
+              'title': 'A',
+              'updated_at': t0.toIso8601String(),
+              'scope_name': 'records',
+              'scope_keys': {'userId': 'u1'},
+            },
+            // mismatched scope -> excluded
+            {
+              'id': 'x',
+              'title': 'X',
+              'updated_at': t1.toIso8601String(),
+              'scope_name': 'other',
+              'scope_keys': {'userId': 'u1'},
+            },
+          ],
+          [
+            // upsert
+            {
+              'id': 'b',
+              'title': 'B',
+              'updated_at': t1.toIso8601String(),
+              'scope_name': 'records',
+              'scope_keys': {'userId': 'u1'},
+            },
+            // delete
+            {
+              'id': 'c',
+              'title': 'C',
+              'updated_at': t2.toIso8601String(),
+              'deleted_at': t2.toIso8601String(),
+              'scope_name': 'records',
+              'scope_keys': {'userId': 'u1'},
+            },
+          ],
+        ];
+        final delta = await storeWithHook.fetchSinceFromRawPages(
+          scope,
+          t0,
+          pages,
+        );
+        expect(delta.upserts.map((e) => e.id), ['b']);
+        expect(delta.deletes, ['c']);
+      });
 
-    test('onParsePageStats accumulates skipped rows', () async {
-      const scope = SyncScope('records', {'userId': 'u1'});
-      final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
-      final pages = <List<Map<String, dynamic>>>[
-        [
-          // missing id -> skipped
-          {'title': 'NoId', 'updated_at': t1.toIso8601String(), 'scope_name': 'records', 'scope_keys': {'userId': 'u1'}},
-          // non-string id -> skipped
-          {'id': 1, 'title': 'BadId', 'updated_at': t1.toIso8601String(), 'scope_name': 'records', 'scope_keys': {'userId': 'u1'}},
-          // good -> upsert
-          {'id': 'g', 'title': 'Good', 'updated_at': t1.toIso8601String(), 'scope_name': 'records', 'scope_keys': {'userId': 'u1'}},
-        ],
-      ];
-      final delta = await storeWithHook.fetchSinceFromRawPages(scope, null, pages);
-      expect(delta.upserts.map((e) => e.id), ['g']);
-      expect(skippedAcc, 2);
+      test('onParsePageStats accumulates skipped rows', () async {
+        const scope = SyncScope('records', {'userId': 'u1'});
+        final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
+        final pages = <List<Map<String, dynamic>>>[
+          [
+            // missing id -> skipped
+            {
+              'title': 'NoId',
+              'updated_at': t1.toIso8601String(),
+              'scope_name': 'records',
+              'scope_keys': {'userId': 'u1'},
+            },
+            // non-string id -> skipped
+            {
+              'id': 1,
+              'title': 'BadId',
+              'updated_at': t1.toIso8601String(),
+              'scope_name': 'records',
+              'scope_keys': {'userId': 'u1'},
+            },
+            // good -> upsert
+            {
+              'id': 'g',
+              'title': 'Good',
+              'updated_at': t1.toIso8601String(),
+              'scope_name': 'records',
+              'scope_keys': {'userId': 'u1'},
+            },
+          ],
+        ];
+        final delta = await storeWithHook.fetchSinceFromRawPages(
+          scope,
+          null,
+          pages,
+        );
+        expect(delta.upserts.map((e) => e.id), ['g']);
+        expect(skippedAcc, 2);
+      });
     });
-  });
 
     test('buildUpsertPayloads injects default scope', () {
       final now = DateTime.utc(2023, 1, 1);
@@ -153,15 +201,27 @@ void main() {
       final since = DateTime.utc(2024, 1, 1);
       final queries = store.buildFetchQueries(scope, since);
       // Should contain equality on scopeName and greaterThan on updatedAt
-      expect(queries.any((q) => q.contains('scope_name') && q.contains('records')), isTrue);
-      expect(queries.any((q) => q.contains('updated_at') && q.contains(since.toIso8601String())), isTrue);
+      expect(
+        queries.any((q) => q.contains('scope_name') && q.contains('records')),
+        isTrue,
+      );
+      expect(
+        queries.any(
+          (q) =>
+              q.contains('updated_at') && q.contains(since.toIso8601String()),
+        ),
+        isTrue,
+      );
     });
 
     test('buildFetchQueries without since builds only scope filter', () {
       const scope = SyncScope('records', {'userId': 'u1'});
       final queries = store.buildFetchQueries(scope, null);
       expect(queries.length, greaterThanOrEqualTo(1));
-      expect(queries.any((q) => q.contains('scope_name') && q.contains('records')), isTrue);
+      expect(
+        queries.any((q) => q.contains('scope_name') && q.contains('records')),
+        isTrue,
+      );
       expect(queries.any((q) => q.contains('updated_at')), isFalse);
     });
 

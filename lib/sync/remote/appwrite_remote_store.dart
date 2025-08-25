@@ -42,7 +42,7 @@ class AppwriteRemoteConfig<T extends HasUpdatedAt, Id> {
   final Map<String, dynamic> Function(SyncScope scope)? scopeFieldsBuilder;
   // Optional parse stats hook (for testing/observability)
   final void Function({required int skipped, required int total})?
-      onParsePageStats;
+  onParsePageStats;
 
   const AppwriteRemoteConfig({
     required this.databases,
@@ -89,18 +89,33 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
   }
 
   // Parse a page of raw rows (as maps) into upserts and delete ids. Exposed for tests.
-  (List<T> upserts, List<Id> deletes) parsePage(List<Map<String, dynamic>> rows) {
+  (List<T> upserts, List<Id> deletes) parsePage(
+    List<Map<String, dynamic>> rows,
+  ) {
     final upserts = <T>[];
     final deletes = <Id>[];
     var skipped = 0;
     for (final m in rows) {
       // Defensive checks: skip rows without required fields
-      if (!m.containsKey(config.idField)) { skipped++; continue; }
-      if (!m.containsKey(config.scopeNameField)) { skipped++; continue; }
-      if (!m.containsKey(config.scopeKeysField)) { skipped++; continue; }
+      if (!m.containsKey(config.idField)) {
+        skipped++;
+        continue;
+      }
+      if (!m.containsKey(config.scopeNameField)) {
+        skipped++;
+        continue;
+      }
+      if (!m.containsKey(config.scopeKeysField)) {
+        skipped++;
+        continue;
+      }
       final idRaw = m[config.idField];
-      if (idRaw is! String) { skipped++; continue; }
-      final isDeleted = config.deletedAtField != null && m[config.deletedAtField!] != null;
+      if (idRaw is! String) {
+        skipped++;
+        continue;
+      }
+      final isDeleted =
+          config.deletedAtField != null && m[config.deletedAtField!] != null;
       if (isDeleted) {
         deletes.add(config.idFromString(idRaw));
       } else {
@@ -119,14 +134,18 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
     // NOTE: Filtering by nested keys in JSON may require specific Appwrite indexing or is unsupported.
     // If unsupported, consider storing denormalized keys (e.g., scope_userId) for indexing.
     if (since != null) {
-      queries.add(aw.Query.greaterThan(config.updatedAtField, since.toIso8601String()));
+      queries.add(
+        aw.Query.greaterThan(config.updatedAtField, since.toIso8601String()),
+      );
     }
     return queries;
   }
 
   // Filter raw rows by scope equality. Exposed for tests.
   List<Map<String, dynamic>> filterRowsByScope(
-      List<Map<String, dynamic>> rows, SyncScope scope) {
+    List<Map<String, dynamic>> rows,
+    SyncScope scope,
+  ) {
     bool shallowMapEquals(Map a, Map b) {
       if (a.length != b.length) return false;
       for (final k in a.keys) {
@@ -135,13 +154,13 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
       }
       return true;
     }
+
     return rows.where((m) {
       final nameOk = m[config.scopeNameField] == scope.name;
       final keysVal = m[config.scopeKeysField];
-      final keysOk = keysVal is Map && shallowMapEquals(
-        Map<String, dynamic>.from(keysVal),
-        scope.keys,
-      );
+      final keysOk =
+          keysVal is Map &&
+          shallowMapEquals(Map<String, dynamic>.from(keysVal), scope.keys);
       return nameOk && keysOk;
     }).toList();
   }
@@ -169,7 +188,9 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
       );
       for (final d in res.documents) {
         final data = Map<String, dynamic>.from(d.data);
-        final isDeleted = config.deletedAtField != null && data[config.deletedAtField!] != null;
+        final isDeleted =
+            config.deletedAtField != null &&
+            data[config.deletedAtField!] != null;
         if (isDeleted) {
           deletes.add(config.idFromString(d.$id));
         } else {
@@ -187,7 +208,11 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
     }
 
     final serverTs = await getServerTime();
-    return Delta<T, Id>(upserts: upserts, deletes: deletes, serverTimestamp: serverTs);
+    return Delta<T, Id>(
+      upserts: upserts,
+      deletes: deletes,
+      serverTimestamp: serverTs,
+    );
   }
 
   // Test-only: simulate fetchSince using raw pages without SDK.
@@ -217,7 +242,11 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
       deletes.addAll(dels);
     }
     final serverTs = await getServerTime();
-    return Delta<T, Id>(upserts: upserts, deletes: deletes, serverTimestamp: serverTs);
+    return Delta<T, Id>(
+      upserts: upserts,
+      deletes: deletes,
+      serverTimestamp: serverTs,
+    );
   }
 
   @override
@@ -254,12 +283,16 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
     for (final id in ids) {
       final docId = config.idToString(id);
       if (soft) {
-        final patch = <String, dynamic>{config.deletedAtField!: DateTime.now().toUtc().toIso8601String()};
+        final patch = <String, dynamic>{
+          config.deletedAtField!: DateTime.now().toUtc().toIso8601String(),
+        };
         if (config.injectScopeOnWrite && config.defaultScope != null) {
-          final scopeMap = config.scopeFieldsBuilder?.call(config.defaultScope!) ?? {
-            config.scopeNameField: config.defaultScope!.name,
-            config.scopeKeysField: config.defaultScope!.keys,
-          };
+          final scopeMap =
+              config.scopeFieldsBuilder?.call(config.defaultScope!) ??
+              {
+                config.scopeNameField: config.defaultScope!.name,
+                config.scopeKeysField: config.defaultScope!.keys,
+              };
           patch.addAll(scopeMap);
         }
         try {
@@ -314,10 +347,12 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
       final id = config.idToString(config.idOf(item));
       final data = Map<String, dynamic>.from(config.toJson(item));
       if (config.injectScopeOnWrite && config.defaultScope != null) {
-        final scopeMap = config.scopeFieldsBuilder?.call(config.defaultScope!) ?? {
-          config.scopeNameField: config.defaultScope!.name,
-          config.scopeKeysField: config.defaultScope!.keys,
-        };
+        final scopeMap =
+            config.scopeFieldsBuilder?.call(config.defaultScope!) ??
+            {
+              config.scopeNameField: config.defaultScope!.name,
+              config.scopeKeysField: config.defaultScope!.keys,
+            };
         data.addAll(scopeMap);
       }
       list.add((id, data));

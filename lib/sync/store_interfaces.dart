@@ -10,8 +10,10 @@ abstract interface class LocalStore<T, Id> {
   Future<T?> getById(Id id);
   Future<List<T>> query(SyncScope scope);
   Future<List<T>> querySince(SyncScope scope, DateTime since);
+
   /// Upsert items that belong to the given [scope].
   Future<void> upsertMany(SyncScope scope, List<T> items);
+
   /// Delete semantics within the given [scope]:
   /// - If [supportsSoftDelete] is true, mark items as deleted (e.g., set deletedAt) and keep rows.
   /// - Otherwise, remove rows permanently (hard delete).

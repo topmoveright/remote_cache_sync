@@ -7,13 +7,13 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 class MockRemoteCacheSyncPlatform
     with MockPlatformInterfaceMixin
     implements RemoteCacheSyncPlatform {
-
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
 }
 
 void main() {
-  final RemoteCacheSyncPlatform initialPlatform = RemoteCacheSyncPlatform.instance;
+  final RemoteCacheSyncPlatform initialPlatform =
+      RemoteCacheSyncPlatform.instance;
 
   test('$MethodChannelRemoteCacheSync is the default instance', () {
     expect(initialPlatform, isInstanceOf<MethodChannelRemoteCacheSync>());

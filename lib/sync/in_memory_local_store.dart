@@ -21,10 +21,7 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
   // Pending ops per scope
   final Map<String, List<PendingOp<T, Id>>> _pending = {};
 
-  InMemoryLocalStore({
-    required this.idOf,
-    this.supportsSoftDelete = true,
-  });
+  InMemoryLocalStore({required this.idOf, this.supportsSoftDelete = true});
 
   String _scopeKey(SyncScope scope) => '${scope.name}|${scope.keys}';
 

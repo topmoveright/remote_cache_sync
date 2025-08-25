@@ -10,7 +10,11 @@ class Record implements HasUpdatedAt {
   @override
   final DateTime updatedAt;
 
-  const Record({required this.id, required this.title, required this.updatedAt});
+  const Record({
+    required this.id,
+    required this.title,
+    required this.updatedAt,
+  });
 }
 
 // Choose which backend to use in the example.
@@ -67,7 +71,9 @@ RemoteStore<Record, String> createRemoteStore() {
       //     injectScopeOnWrite: true,
       //   ),
       // );
-      throw UnimplementedError('Configure Appwrite backend and set activeBackend = BackendType.appwrite');
+      throw UnimplementedError(
+        'Configure Appwrite backend and set activeBackend = BackendType.appwrite',
+      );
     case BackendType.pocketbase:
       // TODO: Replace with your actual PocketBase client and config values.
       // import 'package:pocketbase/pocketbase.dart'; (add at top if you enable)
@@ -101,7 +107,9 @@ RemoteStore<Record, String> createRemoteStore() {
       //     injectScopeOnWrite: true,
       //   ),
       // );
-      throw UnimplementedError('Configure PocketBase backend and set activeBackend = BackendType.pocketbase');
+      throw UnimplementedError(
+        'Configure PocketBase backend and set activeBackend = BackendType.pocketbase',
+      );
     case BackendType.supabase:
       // TODO: Replace with your actual Supabase client and config values.
       // import 'package:supabase_flutter/supabase_flutter.dart'; (add at top if you enable)
@@ -140,6 +148,8 @@ RemoteStore<Record, String> createRemoteStore() {
       //     scopeForDelete: (id) => demoScope,   // or derive from id
       //   ),
       // );
-      throw UnimplementedError('Configure Supabase backend and set activeBackend = BackendType.supabase');
+      throw UnimplementedError(
+        'Configure Supabase backend and set activeBackend = BackendType.supabase',
+      );
   }
 }

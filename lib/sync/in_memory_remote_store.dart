@@ -36,14 +36,16 @@ class InMemoryRemoteStore<T extends HasUpdatedAt, Id>
 
     final upserts = since == null
         ? items.toList(growable: false)
-        : items.where((e) => e.updatedAt.isAfter(since)).toList(growable: false);
+        : items
+              .where((e) => e.updatedAt.isAfter(since))
+              .toList(growable: false);
 
     final deletes = since == null
         ? dels.keys.toList(growable: false)
         : dels.entries
-            .where((e) => e.value.isAfter(since))
-            .map((e) => e.key)
-            .toList(growable: false);
+              .where((e) => e.value.isAfter(since))
+              .map((e) => e.key)
+              .toList(growable: false);
 
     return Delta<T, Id>(
       upserts: upserts,

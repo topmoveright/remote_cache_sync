@@ -29,31 +29,34 @@ void main() {
       );
     });
 
-    test('enqueueCreate + synchronize pushes to remote and clears pending', () async {
-      final now = DateTime.now().toUtc();
-      final r = R('id1', 'A', now);
+    test(
+      'enqueueCreate + synchronize pushes to remote and clears pending',
+      () async {
+        final now = DateTime.now().toUtc();
+        final r = R('id1', 'A', now);
 
-      await orch.enqueueCreate(scope, r.id, r);
-      await orch.synchronize(scope);
+        await orch.enqueueCreate(scope, r.id, r);
+        await orch.synchronize(scope);
 
-      // Local contains the item
-      final localItems = await local.query(scope);
-      expect(localItems.map((e) => e.id), contains(r.id));
+        // Local contains the item
+        final localItems = await local.query(scope);
+        expect(localItems.map((e) => e.id), contains(r.id));
 
-      // Remote delta with since=null contains the item as upsert
-      final delta = await remote.fetchSince(scope, null);
-      expect(delta.upserts.map((e) => e.id), contains(r.id));
+        // Remote delta with since=null contains the item as upsert
+        final delta = await remote.fetchSince(scope, null);
+        expect(delta.upserts.map((e) => e.id), contains(r.id));
 
-      // Pending cleared
-      final pending = await local.getPendingOps(scope);
-      expect(pending, isEmpty);
+        // Pending cleared
+        final pending = await local.getPendingOps(scope);
+        expect(pending, isEmpty);
 
-      // Sync point saved close to server time (within a few seconds)
-      final sp = await local.getSyncPoint(scope);
-      expect(sp, isNotNull);
-      final serverNow = await remote.getServerTime();
-      expect(serverNow.difference(sp!).inSeconds.abs() < 5, isTrue);
-    });
+        // Sync point saved close to server time (within a few seconds)
+        final sp = await local.getSyncPoint(scope);
+        expect(sp, isNotNull);
+        final serverNow = await remote.getServerTime();
+        expect(serverNow.difference(sp!).inSeconds.abs() < 5, isTrue);
+      },
+    );
 
     test('delete flows through and is excluded by soft-delete', () async {
       // Prepare a record present remotely and locally after initial sync
@@ -78,20 +81,27 @@ void main() {
       expect(delta.deletes, contains('id2'));
     });
 
-    test('delta upsert prefers resolver (LastWriteWins by updatedAt)', () async {
-      // Existing local record with older updatedAt
-      final old = R('id3', 'old', DateTime.now().toUtc().subtract(const Duration(minutes: 5)));
-      await local.upsertMany(scope, [old]);
+    test(
+      'delta upsert prefers resolver (LastWriteWins by updatedAt)',
+      () async {
+        // Existing local record with older updatedAt
+        final old = R(
+          'id3',
+          'old',
+          DateTime.now().toUtc().subtract(const Duration(minutes: 5)),
+        );
+        await local.upsertMany(scope, [old]);
 
-      // Remote provides newer version
-      final newer = R('id3', 'new', DateTime.now().toUtc());
-      await remote.batchUpsert([newer]);
+        // Remote provides newer version
+        final newer = R('id3', 'new', DateTime.now().toUtc());
+        await remote.batchUpsert([newer]);
 
-      await orch.synchronize(scope);
-      final items = await local.query(scope);
-      final r = items.firstWhere((e) => e.id == 'id3');
-      expect(r.title, 'new');
-    });
+        await orch.synchronize(scope);
+        final items = await local.query(scope);
+        final r = items.firstWhere((e) => e.id == 'id3');
+        expect(r.title, 'new');
+      },
+    );
 
     test('scope isolation: sync on A does not affect B', () async {
       const scopeA = SyncScope('records', {'userId': 'uA'});

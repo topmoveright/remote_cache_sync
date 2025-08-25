@@ -2,25 +2,31 @@
 * Initial version.
 
 
-## [0.1.0] - 2025-08-14
+[0.1.0]
 
-### Added
-- Flutter Web support: Drift WebAssembly (local `sqlite3.wasm` + web worker) connection (`lib/sync/drift/connection/connection_web.dart`).
-- Dart CLI utility: `dart run remote_cache_sync:web_setup`
-  - Auto-generates a minimal `web/worker.dart` if missing and builds it
-  - Copies `worker.dart.js` (debug) / `worker.dart.min.js` (release) and `sqlite3.wasm` into the target app's `web/` directory
-  - Options: `--release`, `--dest`, `--wasm`
-- CLI environment checks
-  - Verifies `dart` / `flutter` availability
-  - Verifies destination write permissions
-  - Verifies required dev dependencies (`build_runner`, `build_web_compilers`) with actionable guidance
-- Documentation updates
-  - README includes CLI usage and a GitHub Actions CI example
+##### Added
+- Flutter Web: Drift WASM + web worker (`lib/sync/drift/connection/connection_web.dart`).
+- CLI: `dart run remote_cache_sync:web_setup` (generates `web/worker.dart`, builds, copies `worker*.js` + `sqlite3.wasm`; flags: `--release`, `--dest`, `--wasm`).
+- Docs: README updates incl. CLI usage and CI example.
 
-### Changed
-- Connection now selects `worker.dart.js` (debug) or `worker.dart.min.js` (release) based on runtime mode.
+##### Changed
+- Auto-select `worker.dart.js` (debug) or `worker.dart.min.js` (release) by runtime mode.
 
-### Removed
-- Removed legacy shell script `tool/drift_web_assets_sync.sh` (replaced by the CLI).
-- Removed package-local `web/` directory (assets are generated in consumer apps via the CLI).
+##### Removed
+- Legacy script `tool/drift_web_assets_sync.sh` (replaced by CLI).
+- Package-local `web/` directory (assets now generated in consumer apps).
+
+
+[0.1.1]
+
+##### Changed
+- Widened dependency constraints to include latest majors for better pub.dev score:
+  - `appwrite: ">=11.0.1 <18.0.0"`
+  - `pocketbase: ">=0.17.0 <0.24.0"`
+
+##### Docs
+- README: Added explicit adapter import section to keep core entrypoint WASM-safe.
+
+##### Tests
+- Updated tests to import `remote_cache_sync_adapters.dart` for adapter symbols.
 

@@ -12,10 +12,7 @@ abstract interface class SyncOrchestrator<T extends HasUpdatedAt, Id> {
   RemoteStore<T, Id> get remote;
   ConflictResolver<T> get resolver;
 
-  Future<List<T>> read(
-    SyncScope scope, {
-    CachePolicy policy,
-  });
+  Future<List<T>> read(SyncScope scope, {CachePolicy policy});
 
   /// (온라인일 경우) 보류 작업을 원격으로 전송한 뒤 델타를 받아 로컬에 병합합니다.
   Future<void> synchronize(SyncScope scope);

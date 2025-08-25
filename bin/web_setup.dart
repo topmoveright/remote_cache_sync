@@ -78,27 +78,44 @@ void main(List<String> args) async {
     if (discovered != null) {
       wasmSource = discovered;
     } else {
-      stderr.writeln('ERROR: sqlite3.wasm not found. Provide with --wasm <path>.');
+      stderr.writeln(
+        'ERROR: sqlite3.wasm not found. Provide with --wasm <path>.',
+      );
       exit(2);
     }
   }
 
   // Compile worker with selected compiler
-  stdout.writeln('> Building web/worker.dart (${release ? 'release' : 'debug'}) [compiler: $compiler]');
+  stdout.writeln(
+    '> Building web/worker.dart (${release ? 'release' : 'debug'}) [compiler: $compiler]',
+  );
   final outDir = await Directory.systemTemp.createTemp('rcs_web_setup_');
   File compiled;
   if (compiler == 'dart2js' || compiler == 'auto') {
-    compiled = await _compileWithDart2js(appWebWorkerDart.path, outDir, cwd: cwd.path, release: release);
+    compiled = await _compileWithDart2js(
+      appWebWorkerDart.path,
+      outDir,
+      cwd: cwd.path,
+      release: release,
+    );
     if (!await compiled.exists()) {
       if (compiler == 'dart2js') {
         stderr.writeln('ERROR: dart2js compilation failed.');
         exit(4);
       }
       // Fallback to build_runner
-      compiled = await _compileWithBuildRunner(outDir, cwd: cwd.path, release: release);
+      compiled = await _compileWithBuildRunner(
+        outDir,
+        cwd: cwd.path,
+        release: release,
+      );
     }
   } else {
-    compiled = await _compileWithBuildRunner(outDir, cwd: cwd.path, release: release);
+    compiled = await _compileWithBuildRunner(
+      outDir,
+      cwd: cwd.path,
+      release: release,
+    );
   }
   if (!await compiled.exists()) {
     stderr.writeln('ERROR: Compiled worker not found at ${compiled.path}');
@@ -112,8 +129,9 @@ void main(List<String> args) async {
   await compiled.copy(workerOut.path);
   await File(wasmSource).copy('$appWebDir/sqlite3.wasm');
 
-  stdout
-      .writeln('Done. Synced to: $appWebDir\n  - ${workerOut.path}\n  - $appWebDir/sqlite3.wasm');
+  stdout.writeln(
+    'Done. Synced to: $appWebDir\n  - ${workerOut.path}\n  - $appWebDir/sqlite3.wasm',
+  );
 
   // Clean temporary build outputs unless asked to keep them
   if (!keepBuild) {
@@ -146,7 +164,12 @@ Examples:
 ''');
 }
 
-Future<File> _compileWithDart2js(String entry, Directory outDir, {required String cwd, required bool release}) async {
+Future<File> _compileWithDart2js(
+  String entry,
+  Directory outDir, {
+  required String cwd,
+  required bool release,
+}) async {
   final outFile = File('${outDir.path}/worker.dart.js');
   final args = [
     'compile',
@@ -164,16 +187,23 @@ Future<File> _compileWithDart2js(String entry, Directory outDir, {required Strin
   return outFile;
 }
 
-Future<File> _compileWithBuildRunner(Directory outDir, {required String cwd, required bool release}) async {
+Future<File> _compileWithBuildRunner(
+  Directory outDir, {
+  required String cwd,
+  required bool release,
+}) async {
   final argsBuild = [
     'run',
     'build_runner',
     'build',
     if (release) '--release',
     '--delete-conflicting-outputs',
-    '--build-filter', 'web/worker.dart.js',
-    '--build-filter', 'web/worker.dart.js.map',
-    '--build-filter', 'web/worker.dart.bootstrap.js',
+    '--build-filter',
+    'web/worker.dart.js',
+    '--build-filter',
+    'web/worker.dart.js.map',
+    '--build-filter',
+    'web/worker.dart.bootstrap.js',
     '-o',
     'web:${outDir.path}/',
   ];
@@ -200,7 +230,9 @@ Future<void> _ensureTools() async {
       exit(20);
     }
   } catch (_) {
-    stderr.writeln('ERROR: Dart SDK not found. Install Flutter/Dart SDK and ensure "dart" is on PATH.');
+    stderr.writeln(
+      'ERROR: Dart SDK not found. Install Flutter/Dart SDK and ensure "dart" is on PATH.',
+    );
     exit(21);
   }
 
@@ -208,16 +240,22 @@ Future<void> _ensureTools() async {
   try {
     final r = await Process.run('flutter', ['--version']);
     if (r.exitCode != 0) {
-      stdout.writeln('[WARN] Flutter not found or not working. You can still build the worker, but flutter build web will require Flutter.');
+      stdout.writeln(
+        '[WARN] Flutter not found or not working. You can still build the worker, but flutter build web will require Flutter.',
+      );
     }
   } catch (_) {
-    stdout.writeln('[WARN] Flutter not found on PATH. Worker build can proceed; web build requires Flutter.');
+    stdout.writeln(
+      '[WARN] Flutter not found on PATH. Worker build can proceed; web build requires Flutter.',
+    );
   }
 }
 
 Future<void> _ensureWritable(Directory destDir) async {
   try {
-    final testFile = File('${destDir.path}/.rcs_write_test_${DateTime.now().millisecondsSinceEpoch}');
+    final testFile = File(
+      '${destDir.path}/.rcs_write_test_${DateTime.now().millisecondsSinceEpoch}',
+    );
     await testFile.writeAsString('ok');
     await testFile.delete();
   } catch (e) {
@@ -230,7 +268,10 @@ Future<void> _ensureWritable(Directory destDir) async {
 Future<void> _ensureDevDeps(String cwd) async {
   // Check dev deps via `dart pub deps` output
   try {
-    final result = await Process.run('dart', ['pub', 'deps'], workingDirectory: cwd);
+    final result = await Process.run('dart', [
+      'pub',
+      'deps',
+    ], workingDirectory: cwd);
     if (result.exitCode != 0) {
       stderr.writeln('ERROR: Failed to run "dart pub deps" in $cwd');
       stderr.write(result.stderr);
@@ -243,7 +284,9 @@ Future<void> _ensureDevDeps(String cwd) async {
     if (!hasRunner) missing.add('build_runner');
     if (!hasWebCompilers) missing.add('build_web_compilers');
     if (missing.isNotEmpty) {
-      stderr.writeln('ERROR: Missing dev dependency in this app: ${missing.join(', ')}');
+      stderr.writeln(
+        'ERROR: Missing dev dependency in this app: ${missing.join(', ')}',
+      );
       stderr.writeln('Please run in your app root:');
       if (!hasRunner) {
         stderr.writeln('  dart pub add --dev build_runner');
@@ -262,9 +305,12 @@ Future<void> _ensureDevDeps(String cwd) async {
 Future<String?> _locateBundledWasm() async {
   // Attempt 1: Use package_config to resolve this package's root and look for assets/sqlite3.wasm
   try {
-    final config = File('${Directory.current.path}/.dart_tool/package_config.json');
+    final config = File(
+      '${Directory.current.path}/.dart_tool/package_config.json',
+    );
     if (await config.exists()) {
-      final json = jsonDecode(await config.readAsString()) as Map<String, dynamic>;
+      final json =
+          jsonDecode(await config.readAsString()) as Map<String, dynamic>;
       final pkgs = (json['packages'] as List).cast<Map<String, dynamic>>();
       final self = pkgs.firstWhere(
         (p) => p['name'] == 'remote_cache_sync',
@@ -273,7 +319,9 @@ Future<String?> _locateBundledWasm() async {
       if (self.isNotEmpty) {
         final rootUri = self['rootUri'] as String?;
         if (rootUri != null) {
-          final root = Uri.parse(rootUri).toFilePath(windows: Platform.isWindows);
+          final root = Uri.parse(
+            rootUri,
+          ).toFilePath(windows: Platform.isWindows);
           final candidate = File('$root/assets/sqlite3.wasm');
           if (await candidate.exists()) return candidate.path;
           final candidateLib = File('$root/lib/src/assets/sqlite3.wasm');
