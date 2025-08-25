@@ -1,0 +1,5 @@
+- Translations
+  - [:us: English](/)
+- Links
+  - [GitHub](https://github.com/topmoveright/remote_cache_sync)
+  - [Pub.dev](https://pub.dev/packages/remote_cache_sync)
