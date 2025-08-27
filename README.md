@@ -2,6 +2,25 @@
 
 A Flutter/Dart toolkit for remote-first synchronization with offline cache, pending operations, conflict resolution, and scope-aware persistence.
 
+
+## Documentation
+- Full documentation: [Documentation site][docs-site]
+- Quick links:
+  - [Home][docs-home]
+  - [Usage][docs-usage]
+  - [Backend Guides][docs-guides]
+
+## Issues and feedback
+- Please file issues/feature requests here: [Issues](https://github.com/topmoveright/remote_cache_sync/issues)
+
+## Contributing
+- See repository guidelines: [Contributing](https://github.com/topmoveright/remote_cache_sync)
+
+[docs-site]: https://topmoveright.github.io/remote_cache_sync/
+[docs-home]: https://topmoveright.github.io/remote_cache_sync/#/
+[docs-usage]: https://topmoveright.github.io/remote_cache_sync/#/usage/interfaces
+[docs-guides]: https://topmoveright.github.io/remote_cache_sync/#/backend_guides/
+
 ## Installing
 
 Use this package as an executable
@@ -52,7 +71,7 @@ This will add a line like this to your pubspec.yaml and run `flutter pub get`:
 
 ```yaml
 dependencies:
-  remote_cache_sync: ^0.1.0
+  remote_cache_sync: ^0.1.2
 ```
 
 2) Import it
@@ -105,20 +124,3 @@ dart run remote_cache_sync:web_setup --compiler dart2js
 dart run remote_cache_sync:web_setup --compiler build_runner
 ```
 
-## Documentation
-- Full documentation: [Documentation site][docs-site]
-- Quick links:
-  - [Home][docs-home]
-  - [Usage][docs-usage]
-  - [Backend Guides][docs-guides]
-
-## Issues and feedback
-- Please file issues/feature requests here: [Issues](https://github.com/topmoveright/remote_cache_sync/issues)
-
-## Contributing
-- See repository guidelines: [Contributing](https://github.com/topmoveright/remote_cache_sync)
-
-[docs-site]: https://topmoveright.github.io/remote_cache_sync/
-[docs-home]: https://topmoveright.github.io/remote_cache_sync/#/
-[docs-usage]: https://topmoveright.github.io/remote_cache_sync/#/usage/interfaces
-[docs-guides]: https://topmoveright.github.io/remote_cache_sync/#/backend_guides/
