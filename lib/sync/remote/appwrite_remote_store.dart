@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:appwrite/appwrite.dart' as aw;
 import 'package:remote_cache_sync/sync/store_interfaces.dart';
 import 'package:remote_cache_sync/sync/sync_types.dart';
+import 'appwrite_search_plan.dart';
 
 /// Configuration for AppwriteRemoteStore
 ///
@@ -44,6 +45,12 @@ class AppwriteRemoteConfig<T extends HasUpdatedAt, Id> {
   final void Function({required int skipped, required int total})?
   onParsePageStats;
 
+  /// Optional runner to execute remoteSearch without network.
+  /// If provided, `remoteSearch` will call this with the built queries and
+  /// expect a list of raw row maps in return. Intended for unit tests.
+  final Future<List<Map<String, dynamic>>> Function(List<String> queries)?
+      searchRunner;
+
   const AppwriteRemoteConfig({
     required this.databases,
     this.functions,
@@ -64,6 +71,7 @@ class AppwriteRemoteConfig<T extends HasUpdatedAt, Id> {
     this.injectScopeOnWrite = false,
     this.scopeFieldsBuilder,
     this.onParsePageStats,
+    this.searchRunner,
   });
 }
 
@@ -358,5 +366,38 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
       list.add((id, data));
     }
     return list;
+  }
+
+  @override
+  Future<List<T>> remoteSearch(SyncScope scope, QuerySpec spec) async {
+    final queries = buildRemoteSearchQueries(scope, spec);
+    // Test hook: execute via injected runner when provided
+    if (config.searchRunner != null) {
+      final rows = await config.searchRunner!(queries);
+      return rows
+          .map((e) => config.fromJson(Map<String, dynamic>.from(e)))
+          .toList(growable: false);
+    }
+    final res = await config.databases.listDocuments(
+      databaseId: config.databaseId,
+      collectionId: config.collectionId,
+      queries: queries,
+    );
+    return res.documents
+        .map((d) => config.fromJson(Map<String, dynamic>.from(d.data)))
+        .toList(growable: false);
+  }
+
+  /// Build Appwrite remoteSearch queries as a list of query strings.
+  /// Exposed for tests to validate translation from QuerySpec.
+  List<String> buildRemoteSearchQueries(SyncScope scope, QuerySpec spec) {
+    return buildAppwriteRemoteSearchQueries(
+      scope: scope,
+      spec: spec,
+      idField: config.idField,
+      updatedAtField: config.updatedAtField,
+      deletedAtField: config.deletedAtField,
+      scopeNameField: config.scopeNameField,
+    );
   }
 }

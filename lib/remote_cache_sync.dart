@@ -1,5 +1,4 @@
 // Package entrypoint: expose sync contracts, default orchestrator, and demo stores.
-// 패키지 진입점: 동기화 계약, 기본 오케스트레이터, 데모용 인메모리 스토어를 공개합니다.
 
 export 'sync/cache_policy.dart';
 export 'sync/conflict_resolver.dart';

@@ -94,9 +94,9 @@ void main() {
 
       test('aggregates pages with since and scope filters applied', () async {
         const scope = SyncScope('records', {'userId': 'u1'});
-        final t0 = DateTime.utc(2024, 5, 1, 0, 0, 0);
-        final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
-        final t2 = DateTime.utc(2024, 5, 1, 0, 0, 2);
+        final t0 = DateTime.utc(2025, 5, 1, 0, 0, 0);
+        final t1 = DateTime.utc(2025, 5, 1, 0, 0, 1);
+        final t2 = DateTime.utc(2025, 5, 1, 0, 0, 2);
         final pages = <List<Map<String, dynamic>>>[
           [
             // older than since -> excluded
@@ -147,7 +147,7 @@ void main() {
 
       test('onParsePageStats accumulates skipped rows', () async {
         const scope = SyncScope('records', {'userId': 'u1'});
-        final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
+        final t1 = DateTime.utc(2025, 5, 1, 0, 0, 1);
         final pages = <List<Map<String, dynamic>>>[
           [
             // missing id -> skipped
@@ -198,7 +198,7 @@ void main() {
 
     test('buildFetchQueries builds scope + since filters', () {
       const scope = SyncScope('records', {'userId': 'u1'});
-      final since = DateTime.utc(2024, 1, 1);
+      final since = DateTime.utc(2025, 1, 1);
       final queries = store.buildFetchQueries(scope, since);
       // Should contain equality on scopeName and greaterThan on updatedAt
       expect(
@@ -226,7 +226,7 @@ void main() {
     });
 
     test('parsePage splits upserts and deletes', () {
-      final now = DateTime.utc(2024, 1, 1);
+      final now = DateTime.utc(2025, 1, 1);
       final rows = <Map<String, dynamic>>[
         {
           'id': 'a',
@@ -250,7 +250,7 @@ void main() {
     });
 
     test('parsePage handles same-timestamp mixed rows', () {
-      final ts = DateTime.utc(2024, 2, 1, 12);
+      final ts = DateTime.utc(2025, 2, 1, 12);
       final rows = <Map<String, dynamic>>[
         {
           'id': 'x1',
@@ -281,7 +281,7 @@ void main() {
     });
 
     test('parsePage treats explicit null deleted_at as upsert', () {
-      final ts = DateTime.utc(2024, 3, 1);
+      final ts = DateTime.utc(2025, 3, 1);
       final rows = <Map<String, dynamic>>[
         {
           'id': 'n1',
@@ -298,7 +298,7 @@ void main() {
     });
 
     test('parsePage skips rows with missing id', () {
-      final ts = DateTime.utc(2024, 4, 1);
+      final ts = DateTime.utc(2025, 4, 1);
       final rows = <Map<String, dynamic>>[
         {
           // 'id' missing
@@ -314,7 +314,7 @@ void main() {
     });
 
     test('parsePage skips rows with non-string id type', () {
-      final ts = DateTime.utc(2024, 4, 2);
+      final ts = DateTime.utc(2025, 4, 2);
       final rows = <Map<String, dynamic>>[
         {
           'id': 123, // invalid type
@@ -330,7 +330,7 @@ void main() {
     });
 
     test('parsePage skips rows with missing scope fields', () {
-      final ts = DateTime.utc(2024, 4, 3);
+      final ts = DateTime.utc(2025, 4, 3);
       final rows = <Map<String, dynamic>>[
         {
           'id': 'ok1',
@@ -358,21 +358,21 @@ void main() {
         {
           'id': 'm1',
           'title': 'Match',
-          'updated_at': DateTime.utc(2024, 4, 4).toIso8601String(),
+          'updated_at': DateTime.utc(2025, 4, 4).toIso8601String(),
           'scope_name': 'records',
           'scope_keys': {'userId': 'u1'},
         },
         {
           'id': 'nm1',
           'title': 'NameMismatch',
-          'updated_at': DateTime.utc(2024, 4, 4).toIso8601String(),
+          'updated_at': DateTime.utc(2025, 4, 4).toIso8601String(),
           'scope_name': 'others',
           'scope_keys': {'userId': 'u1'},
         },
         {
           'id': 'nm2',
           'title': 'KeysMismatch',
-          'updated_at': DateTime.utc(2024, 4, 4).toIso8601String(),
+          'updated_at': DateTime.utc(2025, 4, 4).toIso8601String(),
           'scope_name': 'records',
           'scope_keys': {'userId': 'u2'},
         },

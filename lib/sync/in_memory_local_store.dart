@@ -62,6 +62,158 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
   }
 
   @override
+  Future<List<T>> queryWith(SyncScope scope, QuerySpec spec) async {
+    // Start from active items within the scope
+    final items = await query(scope);
+    // Filter by spec (only supports 'id' and 'updatedAt' fields here)
+    final filtered = items.where((e) => _matchesSpec(idOf(e), e.updatedAt, spec)).toList();
+
+    // Sorting
+    if (spec.orderBy.isNotEmpty) {
+      filtered.sort((a, b) {
+        for (final o in spec.orderBy) {
+          final c = _compareBy(a, b, o.field, o.descending);
+          if (c != 0) return c;
+        }
+        return 0;
+      });
+    }
+
+    // Pagination
+    final start = (spec.offset ?? 0).clamp(0, filtered.length);
+    final end = spec.limit == null
+        ? filtered.length
+        : (start + spec.limit!).clamp(0, filtered.length);
+    return filtered.sublist(start, end);
+  }
+
+  bool _matchesSpec(Id id, DateTime updatedAt, QuerySpec spec) {
+    for (final f in spec.filters) {
+      dynamic left;
+      switch (f.field) {
+        case 'id':
+          left = id;
+          break;
+        case 'updatedAt':
+          left = updatedAt;
+          break;
+        default:
+          // In-memory store does not support arbitrary payload field filtering
+          return false;
+      }
+      if (!_evalFilter(left, f)) return false;
+    }
+    return true;
+  }
+
+  int _compareBy(T a, T b, String field, bool desc) {
+    int c;
+    switch (field) {
+      case 'id':
+        c = idOf(a).toString().compareTo(idOf(b).toString());
+        break;
+      case 'updatedAt':
+        c = a.updatedAt.compareTo(b.updatedAt);
+        break;
+      default:
+        // Unknown fields sort as equal
+        c = 0;
+    }
+    return desc ? -c : c;
+  }
+
+  bool _evalFilter(dynamic left, FilterOp f) {
+    switch (f.op) {
+      case FilterOperator.eq:
+        return _cmp(left, f.value) == 0;
+      case FilterOperator.neq:
+        return _cmp(left, f.value) != 0;
+      case FilterOperator.gt:
+        return _cmp(left, f.value) > 0;
+      case FilterOperator.gte:
+        return _cmp(left, f.value) >= 0;
+      case FilterOperator.lt:
+        return _cmp(left, f.value) < 0;
+      case FilterOperator.lte:
+        return _cmp(left, f.value) <= 0;
+      case FilterOperator.like:
+        if (left is String && f.value is String) {
+          return left.contains(f.value as String);
+        }
+        return false;
+      case FilterOperator.contains:
+        if (left is Iterable) {
+          return (left).contains(f.value);
+        }
+        if (left is String && f.value is String) {
+          return left.contains(f.value as String);
+        }
+        return false;
+      case FilterOperator.isNull:
+        return left == null;
+      case FilterOperator.isNotNull:
+        return left != null;
+      case FilterOperator.inList:
+        if (f.value is Iterable) {
+          return (f.value as Iterable).contains(left);
+        }
+        return false;
+    }
+  }
+
+  int _cmp(dynamic a, dynamic b) {
+    if (a == null && b == null) return 0;
+    if (a == null) return -1;
+    if (b == null) return 1;
+    if (a is DateTime && b is DateTime) return a.compareTo(b);
+    if (a is num && b is num) return a.compareTo(b);
+    // attempt DateTime parse when strings
+    if (a is String && b is String) {
+      final ad = DateTime.tryParse(a);
+      final bd = DateTime.tryParse(b);
+      if (ad != null && bd != null) return ad.compareTo(bd);
+      return a.compareTo(b);
+    }
+    return a.toString().compareTo(b.toString());
+  }
+
+  @override
+  Future<int> updateWhere(
+    SyncScope scope,
+    QuerySpec spec,
+    List<T> newValues,
+  ) async {
+    if (newValues.isEmpty) return 0;
+    final matched = await queryWith(scope, spec);
+    if (matched.isEmpty) return 0;
+    final sk = _scopeKey(scope);
+    final map = _dataOf(sk);
+    final ids = matched.map(idOf).toSet();
+    int count = 0;
+    for (final nv in newValues) {
+      if (ids.contains(idOf(nv))) {
+        map[idOf(nv)] = nv;
+        if (supportsSoftDelete) {
+          _tombOf(sk).remove(idOf(nv));
+        }
+        count++;
+      }
+    }
+    return count;
+  }
+
+  @override
+  Future<int> deleteWhere(
+    SyncScope scope,
+    QuerySpec spec,
+  ) async {
+    final matched = await queryWith(scope, spec);
+    if (matched.isEmpty) return 0;
+    await deleteMany(scope, matched.map(idOf).toList(growable: false));
+    return matched.length;
+  }
+
+  @override
   Future<void> upsertMany(SyncScope scope, List<T> items) async {
     if (items.isEmpty) return;
     // Scope-aware upsert: place items into the concrete scope only.
