@@ -89,14 +89,14 @@ void main() {
           {
             'id': 'a',
             'title': 'A',
-            'updated_at': '2024-05-01T00:00:00Z',
+            'updated_at': '2025-05-01T00:00:00Z',
             'scope_name': 'records',
             'scope_keys': {'userId': 'u1'},
           },
           {
             'id': 'b',
             'title': 'B',
-            'updated_at': '2024-05-01T00:00:00Z',
+            'updated_at': '2025-05-01T00:00:00Z',
             'scope_name': 'records',
             'scope_keys': {'userId': 'u2'},
           },
@@ -106,7 +106,7 @@ void main() {
       });
 
       test('parsePage defensively skips invalid rows', () {
-        final t = DateTime.utc(2024, 5, 1).toIso8601String();
+        final t = DateTime.utc(2025, 5, 1).toIso8601String();
         final rows = [
           {
             'title': 'no id',
@@ -180,9 +180,9 @@ void main() {
 
       test('aggregates pages with since and scope filters applied', () async {
         const scope = SyncScope('records', {'userId': 'u1'});
-        final t0 = DateTime.utc(2024, 5, 1, 0, 0, 0);
-        final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
-        final t2 = DateTime.utc(2024, 5, 1, 0, 0, 2);
+        final t0 = DateTime.utc(2025, 5, 1, 0, 0, 0);
+        final t1 = DateTime.utc(2025, 5, 1, 0, 0, 1);
+        final t2 = DateTime.utc(2025, 5, 1, 0, 0, 2);
         final pages = <List<Map<String, dynamic>>>[
           [
             {
@@ -229,7 +229,7 @@ void main() {
 
       test('onParsePageStats accumulates skipped rows', () async {
         const scope = SyncScope('records', {'userId': 'u1'});
-        final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
+        final t1 = DateTime.utc(2025, 5, 1, 0, 0, 1);
         final pages = <List<Map<String, dynamic>>>[
           [
             {
@@ -265,7 +265,7 @@ void main() {
 
       test('since boundary is strict (equal timestamp excluded)', () async {
         const scope = SyncScope('records', {'userId': 'u1'});
-        final t = DateTime.utc(2024, 5, 1, 0, 0, 1);
+        final t = DateTime.utc(2025, 5, 1, 0, 0, 1);
         final pages = <List<Map<String, dynamic>>>[
           [
             {
@@ -296,9 +296,9 @@ void main() {
 
       test('multi-page unordered input still aggregates correctly', () async {
         const scope = SyncScope('records', {'userId': 'u1'});
-        final t0 = DateTime.utc(2024, 5, 1, 0, 0, 0);
-        final t1 = DateTime.utc(2024, 5, 1, 0, 0, 1);
-        final t2 = DateTime.utc(2024, 5, 1, 0, 0, 2);
+        final t0 = DateTime.utc(2025, 5, 1, 0, 0, 0);
+        final t1 = DateTime.utc(2025, 5, 1, 0, 0, 1);
+        final t2 = DateTime.utc(2025, 5, 1, 0, 0, 2);
         final pages = <List<Map<String, dynamic>>>[
           [
             {

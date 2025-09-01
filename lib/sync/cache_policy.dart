@@ -1,18 +1,18 @@
-/// CachePolicy는 읽기 시 원격과 로컬 중 어떤 소스를 우선할지 정의합니다.
-/// 또한 (필요 시) 캐시의 신선도(예: TTL)에 기반해 갱신 여부를 판단하는 정책의 근거가 됩니다.
+/// CachePolicy defines which source to prioritize for reads (remote vs. local).
+/// It may also guide refresh decisions based on cache freshness (e.g., TTL).
 ///
-/// 일관성을 위해 원격 우선(remoteFirst)을 권장하며, 로컬은 캐시/오프라인 보조 수단으로 사용합니다.
+/// For consistency, prefer remoteFirst and treat local as cache/offline fallback.
 enum CachePolicy {
-  /// 원격 우선: 온라인 시 원격을 기준으로 하고, 오프라인일 때 로컬로 폴백합니다.
-  /// 사용처에 따라 캐시 먼저 반환 후 백그라운드 갱신 패턴을 사용할 수 있습니다.
+  /// Remote-first: use remote when online, fall back to local when offline.
+  /// Some use cases may return cache first and refresh in the background.
   remoteFirst,
 
-  /// 로컬 우선: 지연 시간 단축을 위해 로컬을 먼저 반환하고, 온라인이면 백그라운드에서 원격으로 갱신합니다.
+  /// Local-first: reduce latency by returning local first and refreshing remotely in background when online.
   localFirst,
 
-  /// 오프라인 전용: 로컬만 접근 (명시적 오프라인 모드)
+  /// Offline-only: access local only (explicit offline mode).
   offlineOnly,
 
-  /// 온라인 전용: 캐시를 우회하고 원격만 사용
+  /// Online-only: bypass cache and use remote only.
   onlineOnly,
 }

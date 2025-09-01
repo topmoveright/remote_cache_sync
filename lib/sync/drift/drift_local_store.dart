@@ -67,6 +67,184 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
   }
 
   @override
+  Future<List<T>> queryWith(SyncScope scope, store.QuerySpec spec) async {
+    // First, constrain by scope and soft-delete at SQL level for efficiency.
+    final sk = _scopeKey(scope);
+    final baseQ = db.select(db.items)
+      ..where(
+        (t) => supportsSoftDelete
+            ? (t.scopeName.equals(scope.name) &
+                t.scopeKeys.equals(sk) &
+                t.deletedAt.isNull())
+            : (t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)),
+      );
+    final rows = await baseQ.get();
+
+    // Apply filters on JSON payload (and special fields) in Dart.
+    final filtered = <_RowHolder>[];
+    for (final r in rows) {
+      final payloadMap = jsonDecode(r.payload) as Map<String, dynamic>;
+      if (_matchesSpec(payloadMap, r.id, r.updatedAt, spec)) {
+        filtered.add(
+          _RowHolder(
+            id: r.id,
+            updatedAtIso: r.updatedAt,
+            payload: payloadMap,
+          ),
+        );
+      }
+    }
+
+    // Sort
+    if (spec.orderBy.isNotEmpty) {
+      filtered.sort((a, b) {
+        for (final o in spec.orderBy) {
+          final c = _compareField(a, b, o.field, o.descending);
+          if (c != 0) return c;
+        }
+        return 0;
+      });
+    }
+
+    // Pagination
+    final start = (spec.offset ?? 0).clamp(0, filtered.length);
+    final end = spec.limit == null
+        ? filtered.length
+        : (start + spec.limit!).clamp(0, filtered.length);
+    final window = filtered.sublist(start, end);
+
+    // Map to T
+    return window
+        .map((h) => fromJson(h.payload))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<int> updateWhere(
+    SyncScope scope,
+    store.QuerySpec spec,
+    List<T> newValues,
+  ) async {
+    if (newValues.isEmpty) return 0;
+    // Find matching ids, then upsert only those provided in newValues whose id is in the match set.
+    final matched = await queryWith(scope, spec);
+    if (matched.isEmpty) return 0;
+    final matchIds = matched.map(idOf).toSet();
+    final toApply = newValues.where((e) => matchIds.contains(idOf(e))).toList();
+    if (toApply.isEmpty) return 0;
+    await upsertMany(scope, toApply);
+    return toApply.length;
+  }
+
+  @override
+  Future<int> deleteWhere(
+    SyncScope scope,
+    store.QuerySpec spec,
+  ) async {
+    final matched = await queryWith(scope, spec);
+    if (matched.isEmpty) return 0;
+    final ids = matched.map(idOf).toList(growable: false);
+    await deleteMany(scope, ids);
+    return ids.length;
+  }
+
+  bool _matchesSpec(
+    Map<String, dynamic> payload,
+    String id,
+    String updatedAtIso,
+    store.QuerySpec spec,
+  ) {
+    for (final f in spec.filters) {
+      final field = f.field;
+      dynamic value;
+      if (field == 'id') {
+        value = id;
+      } else if (field == 'updatedAt') {
+        value = updatedAtIso;
+      } else {
+        value = payload[field];
+      }
+      if (!_evalFilter(value, f)) return false;
+    }
+    return true;
+  }
+
+  int _compareField(_RowHolder a, _RowHolder b, String field, bool desc) {
+    final av = field == 'id'
+        ? a.id
+        : field == 'updatedAt'
+            ? a.updatedAtIso
+            : a.payload[field];
+    final bv = field == 'id'
+        ? b.id
+        : field == 'updatedAt'
+            ? b.updatedAtIso
+            : b.payload[field];
+    final c = _compareDynamic(av, bv);
+    return desc ? -c : c;
+  }
+
+  int _compareDynamic(dynamic a, dynamic b) {
+    if (a == null && b == null) return 0;
+    if (a == null) return -1;
+    if (b == null) return 1;
+    if (a is num && b is num) return a.compareTo(b);
+    // Try parse ISO date
+    DateTime? ad, bd;
+    if (a is String && b is String) {
+      ad = DateTime.tryParse(a);
+      bd = DateTime.tryParse(b);
+      if (ad != null && bd != null) return ad.compareTo(bd);
+      return a.compareTo(b);
+    }
+    // Fallback using string compare
+    return a.toString().compareTo(b.toString());
+  }
+
+  bool _evalFilter(dynamic left, store.FilterOp f) {
+    switch (f.op) {
+      case store.FilterOperator.eq:
+        return left == f.value;
+      case store.FilterOperator.neq:
+        return left != f.value;
+      case store.FilterOperator.gt:
+        return _cmp(left, f.value) > 0;
+      case store.FilterOperator.gte:
+        return _cmp(left, f.value) >= 0;
+      case store.FilterOperator.lt:
+        return _cmp(left, f.value) < 0;
+      case store.FilterOperator.lte:
+        return _cmp(left, f.value) <= 0;
+      case store.FilterOperator.like:
+        if (left is String && f.value is String) {
+          return left.contains(f.value as String);
+        }
+        return false;
+      case store.FilterOperator.contains:
+        if (left is Iterable) {
+          return (left).contains(f.value);
+        }
+        if (left is String && f.value is String) {
+          return left.contains(f.value as String);
+        }
+        return false;
+      case store.FilterOperator.isNull:
+        return left == null;
+      case store.FilterOperator.isNotNull:
+        return left != null;
+      case store.FilterOperator.inList:
+        if (f.value is Iterable) {
+          return (f.value as Iterable).contains(left);
+        }
+        return false;
+    }
+  }
+
+  int _cmp(dynamic a, dynamic b) => _compareDynamic(a, b);
+
+  
+
+  @override
   Future<List<T>> querySince(SyncScope scope, DateTime since) async {
     final sk = _scopeKey(scope);
     final q = db.select(db.items)
@@ -238,4 +416,17 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
         throw ArgumentError('Unknown pending op type: $s');
     }
   }
+}
+
+/// Internal row holder used for JSON-based filtering/sorting windowing.
+class _RowHolder {
+  final String id;
+  final String updatedAtIso;
+  final Map<String, dynamic> payload;
+
+  const _RowHolder({
+    required this.id,
+    required this.updatedAtIso,
+    required this.payload,
+  });
 }

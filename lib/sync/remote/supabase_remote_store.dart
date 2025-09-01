@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../store_interfaces.dart';
 import '../sync_types.dart';
+import 'supabase_search_plan.dart';
 
 /// Supabase-backed implementation of RemoteStore using PostgREST.
 ///
@@ -62,12 +63,19 @@ class SupabaseRemoteConfig<T, Id> {
   /// If provided and returns non-null, that scope will be used to filter the delete.
   final SyncScope? Function(Id id)? scopeForDelete;
 
+  /// Optional runner to execute remoteSearch without hitting the network.
+  /// When provided, `remoteSearch` will call this runner with the built plan
+  /// and expect a list of raw row maps in return. This is primarily for tests.
+  final Future<List<Map<String, dynamic>>> Function(
+    SupabaseSearchRequest plan,
+  )? searchRunner;
+
   const SupabaseRemoteConfig({
     required this.client,
     required this.table,
     required this.idColumn,
     required this.updatedAtColumn,
-    required this.deletedAtColumn,
+    this.deletedAtColumn,
     required this.scopeNameColumn,
     required this.scopeKeysColumn,
     required this.idOf,
@@ -82,6 +90,7 @@ class SupabaseRemoteConfig<T, Id> {
     this.scopeColumnsBuilder,
     this.scopeForUpsert,
     this.scopeForDelete,
+    this.searchRunner,
   });
 
   SupabaseRemoteConfig<T, Id> copyWith({
@@ -104,6 +113,8 @@ class SupabaseRemoteConfig<T, Id> {
     Map<String, dynamic> Function(SyncScope scope)? scopeColumnsBuilder,
     SyncScope? Function(T item)? scopeForUpsert,
     SyncScope? Function(Id id)? scopeForDelete,
+    Future<List<Map<String, dynamic>>> Function(SupabaseSearchRequest plan)?
+        searchRunner,
   }) {
     return SupabaseRemoteConfig<T, Id>(
       client: client ?? this.client,
@@ -125,8 +136,10 @@ class SupabaseRemoteConfig<T, Id> {
       scopeColumnsBuilder: scopeColumnsBuilder ?? this.scopeColumnsBuilder,
       scopeForUpsert: scopeForUpsert ?? this.scopeForUpsert,
       scopeForDelete: scopeForDelete ?? this.scopeForDelete,
+      searchRunner: searchRunner ?? this.searchRunner,
     );
   }
+
 }
 
 class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
@@ -399,5 +412,80 @@ class SupabaseRemoteStore<T extends HasUpdatedAt, Id>
     }
     // Try to coerce to ISO string
     return DateTime.parse(res.toString()).toUtc();
+  }
+
+  @override
+  Future<List<T>> remoteSearch(SyncScope scope, QuerySpec spec) async {
+    final plan = buildSupabaseRemoteSearchRequest(
+      scope: scope,
+      spec: spec,
+      idColumn: config.idColumn,
+      updatedAtColumn: config.updatedAtColumn,
+      deletedAtColumn: config.deletedAtColumn,
+      scopeNameColumn: config.scopeNameColumn,
+      scopeKeysColumn: config.scopeKeysColumn,
+    );
+    // Test hook: execute via injected runner when provided
+    if (config.searchRunner != null) {
+      final rows = await config.searchRunner!(plan);
+      return rows
+          .map((e) => config.fromJson(Map<String, dynamic>.from(e)))
+          .toList(growable: false);
+    }
+
+    dynamic q = _table().select();
+    // Apply filters
+    for (final op in plan.filters) {
+      switch (op.method) {
+        case 'eq':
+          q = q.eq(op.column, op.value);
+          break;
+        case 'neq':
+          q = q.neq(op.column, op.value);
+          break;
+        case 'gt':
+          q = q.gt(op.column, op.value);
+          break;
+        case 'gte':
+          q = q.gte(op.column, op.value);
+          break;
+        case 'lt':
+          q = q.lt(op.column, op.value);
+          break;
+        case 'lte':
+          q = q.lte(op.column, op.value);
+          break;
+        case 'in':
+          q = q.inFilter(op.column, List.from(op.value as List));
+          break;
+        case 'like':
+          q = q.like(op.column, op.value as String);
+          break;
+        case 'contains':
+          q = q.contains(op.column, op.value);
+          break;
+        case 'isNull':
+          q = q.filter(op.column, 'is', null);
+          break;
+        default:
+          throw ArgumentError('Unsupported method in plan: ${op.method}');
+      }
+    }
+    // Apply orders
+    for (final o in plan.orders) {
+      q = q.order(o.column, ascending: o.ascending);
+    }
+    // Apply pagination
+    if (plan.limit != null) {
+      q = q.limit(plan.limit!);
+    }
+    if (plan.rangeFrom != null && plan.rangeTo != null) {
+      q = q.range(plan.rangeFrom!, plan.rangeTo!);
+    }
+
+    final res = await q;
+    return (res as List)
+        .map((e) => config.fromJson(Map<String, dynamic>.from(e)))
+        .toList(growable: false);
   }
 }

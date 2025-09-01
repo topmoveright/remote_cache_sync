@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:remote_cache_sync/sync/store_interfaces.dart';
 import 'package:remote_cache_sync/sync/sync_types.dart';
+import 'pocketbase_search_plan.dart';
 
 /// Configuration for PocketBaseRemoteStore
 ///
@@ -321,5 +322,38 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
       list.add((idStr, data));
     }
     return list;
+  }
+
+  @override
+  Future<List<T>> remoteSearch(SyncScope scope, QuerySpec spec) async {
+    final req = buildRemoteSearchRequest(scope, spec);
+    final list = await config.client.collection(config.collection).getList(
+          page: req.$3,
+          perPage: req.$4,
+          filter: req.$1,
+          sort: req.$2,
+        );
+    final results = <T>[];
+    for (final rec in list.items) {
+      final data = Map<String, dynamic>.from(rec.data);
+      results.add(config.fromJson(data));
+    }
+    return results;
+  }
+
+  /// Build PocketBase remoteSearch parameters (filter, sort, page, perPage).
+  /// Exposed for tests to validate translation from QuerySpec.
+  (String filter, String? sort, int page, int perPage) buildRemoteSearchRequest(
+    SyncScope scope,
+    QuerySpec spec,
+  ) {
+    return buildPocketBaseRemoteSearchRequest(
+      scope: scope,
+      spec: spec,
+      idField: config.idField,
+      updatedAtField: config.updatedAtField,
+      deletedAtField: config.deletedAtField,
+      scopeNameField: config.scopeNameField,
+    );
   }
 }
