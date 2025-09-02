@@ -65,7 +65,11 @@ void main() {
       expect(after.map((e) => e.id), contains('b'));
 
       // querySince excludes deleted items
-      final since = DateTime.utc(2025, 1, 1).subtract(const Duration(minutes: 1));
+      final since = DateTime.utc(
+        2025,
+        1,
+        1,
+      ).subtract(const Duration(minutes: 1));
       final sinceList = await store.querySince(scope, since);
       expect(sinceList.map((e) => e.id), isNot(contains('a')));
     });

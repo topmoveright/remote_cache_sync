@@ -408,7 +408,9 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
     final itemsQ = db.select(db.items);
     if (scope != null) {
       final sk = _scopeKey(scope);
-      itemsQ.where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk));
+      itemsQ.where(
+        (t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk),
+      );
     }
     final itemRows = await itemsQ.get();
     for (final r in itemRows) {
@@ -424,7 +426,9 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
     final pendQ = db.select(db.pendingOps);
     if (scope != null) {
       final sk = _scopeKey(scope);
-      pendQ.where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk));
+      pendQ.where(
+        (t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk),
+      );
     }
     final pendRows = await pendQ.get();
     for (final r in pendRows) {
@@ -469,14 +473,17 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
       await (db.delete(db.syncPoints)).go();
     } else {
       final sk = _scopeKey(scope);
-      await (db.delete(db.items)
-            ..where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)))
+      await (db.delete(db.items)..where(
+            (t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk),
+          ))
           .go();
-      await (db.delete(db.pendingOps)
-            ..where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)))
+      await (db.delete(db.pendingOps)..where(
+            (t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk),
+          ))
           .go();
-      await (db.delete(db.syncPoints)
-            ..where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)))
+      await (db.delete(db.syncPoints)..where(
+            (t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk),
+          ))
           .go();
     }
   }
@@ -493,7 +500,10 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
       // Try delete up to 100 tombstones ordered by deletedAt asc
       final tombQ = db.select(db.items)
         ..where((t) => t.deletedAt.isNotNull())
-        ..orderBy([(t) => d.OrderingTerm(expression: t.deletedAt, mode: d.OrderingMode.asc)])
+        ..orderBy([
+          (t) =>
+              d.OrderingTerm(expression: t.deletedAt, mode: d.OrderingMode.asc),
+        ])
         ..limit(100);
       final tombs = await tombQ.get();
       if (tombs.isNotEmpty) {
@@ -506,7 +516,10 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
       // 2) Remove oldest active items by updatedAt asc
       final actQ = db.select(db.items)
         ..where((t) => t.deletedAt.isNull())
-        ..orderBy([(t) => d.OrderingTerm(expression: t.updatedAt, mode: d.OrderingMode.asc)])
+        ..orderBy([
+          (t) =>
+              d.OrderingTerm(expression: t.updatedAt, mode: d.OrderingMode.asc),
+        ])
         ..limit(100);
       final olds = await actQ.get();
       if (olds.isEmpty) break;

@@ -17,7 +17,7 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
 
   // Heuristic byte costs per entry (very rough; for demos only).
   static const int _bytesPerItem = 1024; // assume ~1KB per item
-  static const int _bytesPerTomb = 128;  // tombstone marker cost
+  static const int _bytesPerTomb = 128; // tombstone marker cost
   static const int _bytesPerPending = 256; // pending op cost
   static const int _bytesPerSyncPoint = 64; // sync point cost
 
@@ -303,7 +303,10 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
       pend = _pendingOf(sk).length;
       sps = _syncPoints.containsKey(sk) ? 1 : 0;
     }
-    return items * _bytesPerItem + tombs * _bytesPerTomb + pend * _bytesPerPending + sps * _bytesPerSyncPoint;
+    return items * _bytesPerItem +
+        tombs * _bytesPerTomb +
+        pend * _bytesPerPending +
+        sps * _bytesPerSyncPoint;
   }
 
   @override
