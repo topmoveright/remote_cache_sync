@@ -43,6 +43,21 @@ Implementations:
 - `SimpleSyncOrchestrator<T, Id>(local, remote, resolver, idOf)`
   - Strongly typed `idOf` avoids dynamic casts.
   - `read(scope, policy)`: `offlineOnly`, `localFirst`, `remoteFirst`, `onlineOnly`.
+  - `readWith(scope, spec, { policy = remoteFirst, preferRemoteEval = false, fallbackToLocal = true })`
+    - Cache-centric behavior: for online policies it synchronizes, then evaluates the query on the local cache.
+    - If `preferRemoteEval` is true, it attempts remote-side evaluation first and upserts results into local; falls back to local when unsupported if `fallbackToLocal` is true.
+
+```dart
+final results = await orchestrator.readWith(
+  const SyncScope('records', {'userId': 'u1'}),
+  QuerySpec(
+    filters: [FilterOp(field: 'updatedAt', op: FilterOperator.gte, value: DateTime.utc(2025, 1, 1))],
+    orderBy: [OrderSpec('updatedAt', descending: true)],
+    limit: 20,
+  ),
+  policy: CachePolicy.remoteFirst,
+);
+```
   - `synchronize(scope)`: Push pending ops, pull delta, merge via resolver, persist, save sync point.
   - `enqueueCreate/Update/Delete`: Write-through to local and queue pending ops; triggers background sync.
 
