@@ -1,5 +1,8 @@
 # Interfaces and Usage Patterns
 
+> Start with the orchestrator-first guide for primary usage: see `usage/orchestrator.md`.
+> This page summarizes interfaces for reference and advanced customization.
+
 This page summarizes the core sync interfaces and common usage patterns in this plugin.
 
 - Local store: `LocalStore<T, Id>` in `lib/sync/store_interfaces.dart`
@@ -14,7 +17,7 @@ This page summarizes the core sync interfaces and common usage patterns in this 
 - **Soft delete**: Prefer tombstones via `deletedAt` to preserve last-change time and support reliable delta sync.
 - **Last-write-wins (LWW)**: Provided by `LastWriteWinsResolver<T>` based on `updatedAt`.
 
-## LocalStore<T, Id>
+## LocalStore<T, Id> (reference)
 
 Required methods:
 - `query(scope)`, `querySince(scope, since)`: Scope-filtered reads.
@@ -26,7 +29,7 @@ Implementations:
 - `InMemoryLocalStore<T, Id>`: demo-only, not for production.
 - `DriftLocalStore<T, Id>`: persistent store using Drift. Provides `supportsSoftDelete = true` by default.
 
-## RemoteStore<T, Id>
+## RemoteStore<T, Id> (reference)
 
 Required methods:
 - `fetchSince(scope, since)`: Return upserts and deletions since server time `since` (or all if null). Must include a `serverTimestamp` (from a trusted server clock).

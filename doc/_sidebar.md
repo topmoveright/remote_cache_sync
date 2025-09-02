@@ -1,9 +1,11 @@
 - [Home](/README.md)
-- Usage
-  - [Interfaces and Usage Patterns](/usage/interfaces.md)
-  - [QuerySpec](/usage/query_spec.md)
 - Backend Guides
   - [Appwrite](/backend_guides/appwrite.md)
   - [PocketBase](/backend_guides/pocketbase.md)
   - [Supabase](/backend_guides/supabase.md)
+- Orchestrator
+  - [Orchestrator](/usage/orchestrator.md)
+- Usage
+  - [Interfaces](/usage/interfaces.md)
+  - [QuerySpec](/usage/query_spec.md)
 - [Testing](/testing.md)

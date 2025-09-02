@@ -159,6 +159,11 @@ final removed = await mem.deleteWhere(
 - Prefer adding more selective scope keys where possible.
 - If specific heavy filters are common, consider extending the Drift schema and mapping particular fields to SQL columns.
 
-## RemoteStore (Phase 2)
+## Remote evaluation via RemoteStore and Orchestrator
 
-A cross-backend `remoteSearch(scope, QuerySpec)` can be added later, mapped to each provider's query DSL (Appwrite, Supabase, PocketBase). Only operators supported by each backend would be enabled.
+- `RemoteStore<T, Id>.remoteSearch(scope, spec)` is implemented and maps a subset of `QuerySpec` to each backend's native query DSL (Appwrite, Supabase, PocketBase).
+- Each adapter supports only operators/fields that are natively available. Unsupported items must throw `ArgumentError` with a clear message.
+- Orchestrator integration:
+  - `orchestrator.readWith(scope, spec, preferRemoteEval: true)` will attempt `remoteSearch` first.
+  - Successful remote results are upserted into local, then the same `spec` is evaluated locally to ensure cache-consistent ordering/pagination.
+  - If `remoteSearch` throws due to unsupported filters and `fallbackToLocal: true`, the orchestrator synchronizes and evaluates locally instead.

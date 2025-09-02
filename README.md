@@ -1,6 +1,47 @@
 # Remote Cache Sync for Flutter
 
-Remote Cache Sync lets you manage remote data via a single cache-first query API. You do not need to call remote backends directly; the orchestrator keeps your local cache synchronized and evaluates your queries consistently offline and online.
+Remote Cache Sync lets you manage remote data via a single cache-first query API. You don't call remote SDKs directly; the orchestrator keeps your local cache synchronized and evaluates your queries consistently offline and online.
+
+## Overview
+
+- Single entrypoint: orchestrator handles reads/writes, sync, conflicts
+- Cache-consistent queries using `QuerySpec`
+- Policies: `remoteFirst`, `localFirst`, `offlineOnly`, `onlineOnly`
+- Adapters included: Appwrite, PocketBase, Supabase; Local store: Drift
+
+## Quick Setup (Supabase)
+
+```yaml
+dependencies:
+  remote_cache_sync: ^0.1.4
+  supabase_flutter: ^2.6.0
+```
+
+```dart
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:remote_cache_sync/remote_cache_sync.dart';
+
+await Supabase.initialize(url: 'https://YOUR_PROJECT.supabase.co', anonKey: 'YOUR_ANON_OR_SERVICE_ROLE_KEY');
+final client = Supabase.instance.client;
+
+final remote = SupabaseRemoteStore<Todo, String>(
+  config: SupabaseRemoteConfig<Todo, String>(
+    client: client,
+    table: 'todos',
+    idColumn: 'id',
+    updatedAtColumn: 'updated_at',
+    deletedAtColumn: 'deleted_at',
+    scopeNameColumn: 'scope_name',
+    scopeKeysColumn: 'scope_keys',
+    idOf: (t) => t.id,
+    idToString: (s) => s,
+    idFromString: (s) => s,
+    toJson: (t) => {/* map Todo -> row */},
+    fromJson: (m) => /* map row -> Todo */,
+    serverTimeRpcName: 'server_time_utc',
+  ),
+);
+```
 
 ## Orchestrator-first Quickstart
 
@@ -36,11 +77,17 @@ Key benefits:
 - Pluggable remotes (Appwrite, PocketBase, Supabase) and local stores (Drift)
 
 ## Documentation
-- Start here: Orchestrator usage [docs-orch]
-- Interfaces overview: [docs-usage]
-- QuerySpec: [docs-query-spec]
-- Backend Guides: [Supabase] · [Appwrite] · [PocketBase]
-- Testing: [docs-testing]
+- [README.md][README]
+- Backend Guides
+  - [Supabase][Supabase]
+  - [Appwrite][Appwrite]
+  - [PocketBase][PocketBase]
+- Orchestrator
+  - [Orchestrator][Orchestrator]
+- Usage
+  - [Interfaces][Interfaces]
+  - [QuerySpec][QuerySpec]
+- [Testing][Testing]
 
 ## Issues and feedback
 - File issues/feature requests: [Issues](https://github.com/topmoveright/remote_cache_sync/issues)
@@ -48,12 +95,12 @@ Key benefits:
 ## Contributing
 - See repository guidelines: [Contributing](https://github.com/topmoveright/remote_cache_sync)
 
-[docs-site]: https://topmoveright.github.io/remote_cache_sync/
+[README]: https://topmoveright.github.io/remote_cache_sync/
 [docs-home]: https://topmoveright.github.io/remote_cache_sync/#/
-[docs-usage]: https://topmoveright.github.io/remote_cache_sync/#/usage/interfaces
-[docs-orch]: https://topmoveright.github.io/remote_cache_sync/#/usage/orchestrator
-[docs-query-spec]: https://topmoveright.github.io/remote_cache_sync/#/usage/query_spec
-[docs-testing]: https://topmoveright.github.io/remote_cache_sync/#/testing
 [Supabase]: https://topmoveright.github.io/remote_cache_sync/#/backend_guides/supabase
 [Appwrite]: https://topmoveright.github.io/remote_cache_sync/#/backend_guides/appwrite
 [PocketBase]: https://topmoveright.github.io/remote_cache_sync/#/backend_guides/pocketbase
+[Orchestrator]: https://topmoveright.github.io/remote_cache_sync/#/usage/orchestrator
+[Interfaces]: https://topmoveright.github.io/remote_cache_sync/#/usage/interfaces
+[QuerySpec]: https://topmoveright.github.io/remote_cache_sync/#/usage/query_spec
+[Testing]: https://topmoveright.github.io/remote_cache_sync/#/testing
