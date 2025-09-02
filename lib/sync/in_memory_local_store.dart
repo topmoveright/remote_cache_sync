@@ -66,7 +66,9 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
     // Start from active items within the scope
     final items = await query(scope);
     // Filter by spec (only supports 'id' and 'updatedAt' fields here)
-    final filtered = items.where((e) => _matchesSpec(idOf(e), e.updatedAt, spec)).toList();
+    final filtered = items
+        .where((e) => _matchesSpec(idOf(e), e.updatedAt, spec))
+        .toList();
 
     // Sorting
     if (spec.orderBy.isNotEmpty) {
@@ -203,10 +205,7 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
   }
 
   @override
-  Future<int> deleteWhere(
-    SyncScope scope,
-    QuerySpec spec,
-  ) async {
+  Future<int> deleteWhere(SyncScope scope, QuerySpec spec) async {
     final matched = await queryWith(scope, spec);
     if (matched.isEmpty) return 0;
     await deleteMany(scope, matched.map(idOf).toList(growable: false));

@@ -74,8 +74,8 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
       ..where(
         (t) => supportsSoftDelete
             ? (t.scopeName.equals(scope.name) &
-                t.scopeKeys.equals(sk) &
-                t.deletedAt.isNull())
+                  t.scopeKeys.equals(sk) &
+                  t.deletedAt.isNull())
             : (t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)),
       );
     final rows = await baseQ.get();
@@ -86,11 +86,7 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
       final payloadMap = jsonDecode(r.payload) as Map<String, dynamic>;
       if (_matchesSpec(payloadMap, r.id, r.updatedAt, spec)) {
         filtered.add(
-          _RowHolder(
-            id: r.id,
-            updatedAtIso: r.updatedAt,
-            payload: payloadMap,
-          ),
+          _RowHolder(id: r.id, updatedAtIso: r.updatedAt, payload: payloadMap),
         );
       }
     }
@@ -114,9 +110,7 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
     final window = filtered.sublist(start, end);
 
     // Map to T
-    return window
-        .map((h) => fromJson(h.payload))
-        .toList(growable: false);
+    return window.map((h) => fromJson(h.payload)).toList(growable: false);
   }
 
   @override
@@ -137,10 +131,7 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
   }
 
   @override
-  Future<int> deleteWhere(
-    SyncScope scope,
-    store.QuerySpec spec,
-  ) async {
+  Future<int> deleteWhere(SyncScope scope, store.QuerySpec spec) async {
     final matched = await queryWith(scope, spec);
     if (matched.isEmpty) return 0;
     final ids = matched.map(idOf).toList(growable: false);
@@ -173,13 +164,13 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
     final av = field == 'id'
         ? a.id
         : field == 'updatedAt'
-            ? a.updatedAtIso
-            : a.payload[field];
+        ? a.updatedAtIso
+        : a.payload[field];
     final bv = field == 'id'
         ? b.id
         : field == 'updatedAt'
-            ? b.updatedAtIso
-            : b.payload[field];
+        ? b.updatedAtIso
+        : b.payload[field];
     final c = _compareDynamic(av, bv);
     return desc ? -c : c;
   }
@@ -241,8 +232,6 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
   }
 
   int _cmp(dynamic a, dynamic b) => _compareDynamic(a, b);
-
-  
 
   @override
   Future<List<T>> querySince(SyncScope scope, DateTime since) async {
