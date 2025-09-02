@@ -48,6 +48,47 @@ class SimpleSyncOrchestrator<T extends HasUpdatedAt, Id>
         await synchronize(scope);
         return local.query(scope);
     }
+
+  }
+
+  @override
+  Future<List<T>> readWith(
+    SyncScope scope,
+    QuerySpec spec, {
+    CachePolicy policy = CachePolicy.remoteFirst,
+    bool preferRemoteEval = false,
+    bool fallbackToLocal = true,
+  }) async {
+    switch (policy) {
+      case CachePolicy.offlineOnly:
+        // Pure offline: evaluate QuerySpec against local cache only.
+        return local.queryWith(scope, spec);
+      case CachePolicy.localFirst:
+        // Return local immediately; refresh in background.
+        final localItems = await local.queryWith(scope, spec);
+        unawaited(synchronize(scope));
+        return localItems;
+      case CachePolicy.remoteFirst:
+      case CachePolicy.onlineOnly:
+        // Keep cache-centric results: sync then evaluate on local.
+        // Optionally try remote-side evaluation first for accuracy/perf,
+        // but still return the locally evaluated result for consistency.
+        if (preferRemoteEval) {
+          try {
+            final remoteItems = await remote.remoteSearch(scope, spec);
+            // Upsert remote-evaluated results into local cache to keep it fresh.
+            if (remoteItems.isNotEmpty) {
+              await local.upsertMany(scope, remoteItems);
+            }
+          } on ArgumentError catch (_) {
+            // Backend did not support part of the spec. Fall back to sync+local.
+            if (!fallbackToLocal) rethrow;
+          }
+        }
+
+        await synchronize(scope);
+        return local.queryWith(scope, spec);
+    }
   }
 
   @override
