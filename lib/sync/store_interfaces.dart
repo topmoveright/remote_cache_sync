@@ -39,6 +39,21 @@ abstract interface class LocalStore<T, Id> {
   Future<List<PendingOp<T, Id>>> getPendingOps(SyncScope scope);
   Future<void> enqueuePendingOp(PendingOp<T, Id> op);
   Future<void> clearPendingOps(SyncScope scope, List<String> opIds);
+
+  /// Cache management APIs
+  /// Returns an approximate size of the local cache in bytes. When [scope] is provided,
+  /// the size is calculated only for that scope; otherwise it is for the whole store.
+  Future<int> approxCacheSizeBytes({SyncScope? scope});
+
+  /// Sets the cache size limit in bytes. When null, no limit is enforced.
+  Future<void> setCacheSizeLimitBytes(int? bytes);
+
+  /// Returns the cache size limit in bytes, or null if unlimited.
+  Future<int?> getCacheSizeLimitBytes();
+
+  /// Clears cached data. When [scope] is provided, clears only that scope; otherwise clears all data.
+  /// Implementations should also clear sync points and pending operations for the cleared scope(s).
+  Future<void> clearCache({SyncScope? scope});
 }
 
 /// RemoteStore abstracts access to the remote service for syncable models.

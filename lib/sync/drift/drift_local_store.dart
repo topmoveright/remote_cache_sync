@@ -20,6 +20,9 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
   @override
   final bool supportsSoftDelete;
 
+  // Optional in-memory cache size limit in bytes. When null, unlimited.
+  int? _sizeLimitBytes;
+
   DriftLocalStore({
     required this.db,
     required this.idOf,
@@ -280,6 +283,8 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
         );
       }
     });
+    // Enforce cache size limit if configured.
+    await _maybeEnforceLimit();
   }
 
   @override
@@ -319,6 +324,7 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
           ))
           .go();
     }
+    await _maybeEnforceLimit();
   }
 
   @override
@@ -391,6 +397,123 @@ class DriftLocalStore<T extends HasUpdatedAt, Id>
   Future<void> clearPendingOps(SyncScope scope, List<String> opIds) async {
     if (opIds.isEmpty) return;
     await (db.delete(db.pendingOps)..where((t) => t.opId.isIn(opIds))).go();
+  }
+
+  // ---- Cache management implementation ----
+
+  @override
+  Future<int> approxCacheSizeBytes({SyncScope? scope}) async {
+    int total = 0;
+    // Items table
+    final itemsQ = db.select(db.items);
+    if (scope != null) {
+      final sk = _scopeKey(scope);
+      itemsQ.where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk));
+    }
+    final itemRows = await itemsQ.get();
+    for (final r in itemRows) {
+      total += utf8.encode(r.scopeName).length;
+      total += utf8.encode(r.scopeKeys).length;
+      total += utf8.encode(r.id).length;
+      total += utf8.encode(r.payload).length;
+      total += utf8.encode(r.updatedAt).length;
+      if (r.deletedAt != null) total += utf8.encode(r.deletedAt!).length;
+    }
+
+    // PendingOps table
+    final pendQ = db.select(db.pendingOps);
+    if (scope != null) {
+      final sk = _scopeKey(scope);
+      pendQ.where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk));
+    }
+    final pendRows = await pendQ.get();
+    for (final r in pendRows) {
+      total += utf8.encode(r.opId).length;
+      total += utf8.encode(r.scopeName).length;
+      total += utf8.encode(r.scopeKeys).length;
+      total += utf8.encode(r.type).length;
+      total += utf8.encode(r.id).length;
+      if (r.payload != null) total += utf8.encode(r.payload!).length;
+      total += utf8.encode(r.updatedAt).length;
+    }
+
+    // SyncPoints table (small but include for completeness)
+    final spQ = db.select(db.syncPoints);
+    if (scope != null) {
+      final sk = _scopeKey(scope);
+      spQ.where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk));
+    }
+    final spRows = await spQ.get();
+    for (final r in spRows) {
+      total += utf8.encode(r.scopeName).length;
+      total += utf8.encode(r.scopeKeys).length;
+      total += utf8.encode(r.lastServerTs).length;
+    }
+    return total;
+  }
+
+  @override
+  Future<void> setCacheSizeLimitBytes(int? bytes) async {
+    _sizeLimitBytes = bytes;
+    await _maybeEnforceLimit();
+  }
+
+  @override
+  Future<int?> getCacheSizeLimitBytes() async => _sizeLimitBytes;
+
+  @override
+  Future<void> clearCache({SyncScope? scope}) async {
+    if (scope == null) {
+      await (db.delete(db.items)).go();
+      await (db.delete(db.pendingOps)).go();
+      await (db.delete(db.syncPoints)).go();
+    } else {
+      final sk = _scopeKey(scope);
+      await (db.delete(db.items)
+            ..where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)))
+          .go();
+      await (db.delete(db.pendingOps)
+            ..where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)))
+          .go();
+      await (db.delete(db.syncPoints)
+            ..where((t) => t.scopeName.equals(scope.name) & t.scopeKeys.equals(sk)))
+          .go();
+    }
+  }
+
+  Future<void> _maybeEnforceLimit() async {
+    final limit = _sizeLimitBytes;
+    if (limit == null) return;
+    // Iterate in small batches to avoid long transactions.
+    // 1) Remove oldest tombstoned (soft-deleted) items first.
+    int current = await approxCacheSizeBytes();
+    int guard = 0;
+    while (current > limit && guard < 1000) {
+      guard++;
+      // Try delete up to 100 tombstones ordered by deletedAt asc
+      final tombQ = db.select(db.items)
+        ..where((t) => t.deletedAt.isNotNull())
+        ..orderBy([(t) => d.OrderingTerm(expression: t.deletedAt, mode: d.OrderingMode.asc)])
+        ..limit(100);
+      final tombs = await tombQ.get();
+      if (tombs.isNotEmpty) {
+        final ids = tombs.map((r) => r.id).toList();
+        await (db.delete(db.items)..where((t) => t.id.isIn(ids))).go();
+        current = await approxCacheSizeBytes();
+        continue;
+      }
+
+      // 2) Remove oldest active items by updatedAt asc
+      final actQ = db.select(db.items)
+        ..where((t) => t.deletedAt.isNull())
+        ..orderBy([(t) => d.OrderingTerm(expression: t.updatedAt, mode: d.OrderingMode.asc)])
+        ..limit(100);
+      final olds = await actQ.get();
+      if (olds.isEmpty) break;
+      final ids2 = olds.map((r) => r.id).toList();
+      await (db.delete(db.items)..where((t) => t.id.isIn(ids2))).go();
+      current = await approxCacheSizeBytes();
+    }
   }
 
   store.PendingOpType _parseType(String s) {

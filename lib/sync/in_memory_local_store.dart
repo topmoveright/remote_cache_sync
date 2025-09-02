@@ -12,6 +12,15 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
 
   final Id Function(T) idOf;
 
+  // Optional cache size limit (bytes). Approximated using heuristics.
+  int? _sizeLimitBytes;
+
+  // Heuristic byte costs per entry (very rough; for demos only).
+  static const int _bytesPerItem = 1024; // assume ~1KB per item
+  static const int _bytesPerTomb = 128;  // tombstone marker cost
+  static const int _bytesPerPending = 256; // pending op cost
+  static const int _bytesPerSyncPoint = 64; // sync point cost
+
   // Data per scope
   final Map<String, Map<Id, T>> _data = {};
   // Tombstones per scope (only used when supportsSoftDelete)
@@ -228,6 +237,7 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
         tomb.remove(idOf(it));
       }
     }
+    await _maybeEnforceLimit();
   }
 
   @override
@@ -242,6 +252,7 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
         _tombOf(sk)[id] = now;
       }
     }
+    await _maybeEnforceLimit();
   }
 
   @override
@@ -262,6 +273,7 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
   @override
   Future<void> enqueuePendingOp(PendingOp<T, Id> op) async {
     _pendingOf(_scopeKey(op.scope)).add(op);
+    await _maybeEnforceLimit();
   }
 
   @override
@@ -269,5 +281,109 @@ class InMemoryLocalStore<T extends HasUpdatedAt, Id>
     final list = _pendingOf(_scopeKey(scope));
     final set = HashSet.of(opIds);
     list.removeWhere((e) => set.contains(e.opId));
+  }
+
+  // ---- Cache management implementation ----
+  @override
+  Future<int> approxCacheSizeBytes({SyncScope? scope}) async {
+    int items = 0, tombs = 0, pend = 0, sps = 0;
+    if (scope == null) {
+      for (final sk in _data.keys) {
+        items += _dataOf(sk).length;
+        tombs += supportsSoftDelete ? _tombOf(sk).length : 0;
+      }
+      for (final sk in _pending.keys) {
+        pend += _pendingOf(sk).length;
+      }
+      sps = _syncPoints.length;
+    } else {
+      final sk = _scopeKey(scope);
+      items = _dataOf(sk).length;
+      tombs = supportsSoftDelete ? _tombOf(sk).length : 0;
+      pend = _pendingOf(sk).length;
+      sps = _syncPoints.containsKey(sk) ? 1 : 0;
+    }
+    return items * _bytesPerItem + tombs * _bytesPerTomb + pend * _bytesPerPending + sps * _bytesPerSyncPoint;
+  }
+
+  @override
+  Future<void> setCacheSizeLimitBytes(int? bytes) async {
+    _sizeLimitBytes = bytes;
+    await _maybeEnforceLimit();
+  }
+
+  @override
+  Future<int?> getCacheSizeLimitBytes() async => _sizeLimitBytes;
+
+  @override
+  Future<void> clearCache({SyncScope? scope}) async {
+    if (scope == null) {
+      _data.clear();
+      _tombstones.clear();
+      _pending.clear();
+      _syncPoints.clear();
+    } else {
+      final sk = _scopeKey(scope);
+      _data.remove(sk);
+      _tombstones.remove(sk);
+      _pending.remove(sk);
+      _syncPoints.remove(sk);
+    }
+  }
+
+  Future<void> _maybeEnforceLimit() async {
+    final limit = _sizeLimitBytes;
+    if (limit == null) return;
+    int current = await approxCacheSizeBytes();
+    int guard = 0;
+    while (current > limit && guard < 1000) {
+      guard++;
+      // 1) Drop oldest tombstones first across all scopes
+      Id? tombToRemoveId;
+      String? tombSk;
+      DateTime? oldestTomb;
+      if (supportsSoftDelete) {
+        for (final entry in _tombstones.entries) {
+          for (final tEntry in entry.value.entries) {
+            if (oldestTomb == null || tEntry.value.isBefore(oldestTomb)) {
+              oldestTomb = tEntry.value;
+              tombToRemoveId = tEntry.key;
+              tombSk = entry.key;
+            }
+          }
+        }
+      }
+      if (tombToRemoveId != null && tombSk != null) {
+        _tombOf(tombSk).remove(tombToRemoveId);
+        current = await approxCacheSizeBytes();
+        continue;
+      }
+
+      // 2) Drop oldest active items by updatedAt across all scopes
+      String? targetSk;
+      Id? targetId;
+      DateTime? oldest;
+      for (final entry in _data.entries) {
+        final sk = entry.key;
+        final tomb = supportsSoftDelete ? _tombOf(sk) : <Id, DateTime>{};
+        for (final item in entry.value.values) {
+          if (supportsSoftDelete && tomb.containsKey(idOf(item))) continue;
+          if (oldest == null || item.updatedAt.isBefore(oldest)) {
+            oldest = item.updatedAt;
+            targetSk = sk;
+            targetId = idOf(item);
+          }
+        }
+      }
+      if (targetSk != null && targetId != null) {
+        _dataOf(targetSk).remove(targetId);
+        if (supportsSoftDelete) {
+          _tombOf(targetSk).remove(targetId);
+        }
+        current = await approxCacheSizeBytes();
+        continue;
+      }
+      break; // nothing to remove
+    }
   }
 }
