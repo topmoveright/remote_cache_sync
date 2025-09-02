@@ -87,14 +87,17 @@ void main() {
       );
     });
 
-    test('offset must be a multiple of limit (PocketBase paging constraint)', () {
-      final scope = SyncScope('s', {'u': '1'});
-      final spec = const QuerySpec(limit: 10, offset: 15);
-      expect(
-        () => store.buildRemoteSearchRequest(scope, spec),
-        throwsArgumentError,
-      );
-    });
+    test(
+      'offset must be a multiple of limit (PocketBase paging constraint)',
+      () {
+        final scope = SyncScope('s', {'u': '1'});
+        final spec = const QuerySpec(limit: 10, offset: 15);
+        expect(
+          () => store.buildRemoteSearchRequest(scope, spec),
+          throwsArgumentError,
+        );
+      },
+    );
 
     test('unsupported filter field throws', () {
       final scope = SyncScope('s', {'u': '1'});
@@ -173,7 +176,9 @@ void main() {
         FilterOperator.lt,
         FilterOperator.lte,
       ]) {
-        final spec = QuerySpec(filters: [FilterOp(field: 'updatedAt', op: op, value: null)]);
+        final spec = QuerySpec(
+          filters: [FilterOp(field: 'updatedAt', op: op, value: null)],
+        );
         expect(
           () => store.buildRemoteSearchRequest(scope, spec),
           throwsArgumentError,
@@ -184,7 +189,11 @@ void main() {
     test('updatedAt value type validation', () {
       final scope = SyncScope('s', {'u': '1'});
       // invalid single value type
-      var spec = const QuerySpec(filters: [FilterOp(field: 'updatedAt', op: FilterOperator.eq, value: 123)]);
+      var spec = const QuerySpec(
+        filters: [
+          FilterOp(field: 'updatedAt', op: FilterOperator.eq, value: 123),
+        ],
+      );
       expect(
         () => store.buildRemoteSearchRequest(scope, spec),
         throwsArgumentError,

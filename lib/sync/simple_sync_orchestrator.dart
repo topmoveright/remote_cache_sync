@@ -48,7 +48,6 @@ class SimpleSyncOrchestrator<T extends HasUpdatedAt, Id>
         await synchronize(scope);
         return local.query(scope);
     }
-
   }
 
   @override

@@ -10,7 +10,9 @@ void main() {
       // updatedAt desc
       final reqUpdatedDesc = buildPocketBaseRemoteSearchRequest(
         scope: scope,
-        spec: const QuerySpec(orderBy: [OrderSpec('updatedAt', descending: true)]),
+        spec: const QuerySpec(
+          orderBy: [OrderSpec('updatedAt', descending: true)],
+        ),
         idField: 'id',
         updatedAtField: 'updated',
         deletedAtField: 'deleted_at',

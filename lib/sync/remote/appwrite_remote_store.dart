@@ -49,7 +49,7 @@ class AppwriteRemoteConfig<T extends HasUpdatedAt, Id> {
   /// If provided, `remoteSearch` will call this with the built queries and
   /// expect a list of raw row maps in return. Intended for unit tests.
   final Future<List<Map<String, dynamic>>> Function(List<String> queries)?
-      searchRunner;
+  searchRunner;
 
   const AppwriteRemoteConfig({
     required this.databases,

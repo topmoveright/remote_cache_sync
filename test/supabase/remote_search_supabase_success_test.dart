@@ -110,7 +110,10 @@ void main() {
         scopeNameColumn: 'scope_name',
         scopeKeysColumn: 'scope_keys',
       );
-      expect(asc.orders.any((o) => o.column == 'id' && o.ascending == true), isTrue);
+      expect(
+        asc.orders.any((o) => o.column == 'id' && o.ascending == true),
+        isTrue,
+      );
 
       final desc = buildSupabaseRemoteSearchRequest(
         scope: scope,
@@ -121,7 +124,10 @@ void main() {
         scopeNameColumn: 'scope_name',
         scopeKeysColumn: 'scope_keys',
       );
-      expect(desc.orders.any((o) => o.column == 'id' && o.ascending == false), isTrue);
+      expect(
+        desc.orders.any((o) => o.column == 'id' && o.ascending == false),
+        isTrue,
+      );
     });
   });
 }

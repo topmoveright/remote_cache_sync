@@ -327,12 +327,9 @@ class PocketBaseRemoteStore<T extends HasUpdatedAt, Id>
   @override
   Future<List<T>> remoteSearch(SyncScope scope, QuerySpec spec) async {
     final req = buildRemoteSearchRequest(scope, spec);
-    final list = await config.client.collection(config.collection).getList(
-          page: req.$3,
-          perPage: req.$4,
-          filter: req.$1,
-          sort: req.$2,
-        );
+    final list = await config.client
+        .collection(config.collection)
+        .getList(page: req.$3, perPage: req.$4, filter: req.$1, sort: req.$2);
     final results = <T>[];
     for (final rec in list.items) {
       final data = Map<String, dynamic>.from(rec.data);

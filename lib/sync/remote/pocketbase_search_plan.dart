@@ -3,12 +3,8 @@ import '../store_interfaces.dart';
 
 /// Build PocketBase remoteSearch parameters (filter, sort, page, perPage)
 /// without requiring a PocketBase client.
-(
-  String filter,
-  String? sort,
-  int page,
-  int perPage,
-) buildPocketBaseRemoteSearchRequest({
+(String filter, String? sort, int page, int perPage)
+buildPocketBaseRemoteSearchRequest({
   required SyncScope scope,
   required QuerySpec spec,
   required String idField,
@@ -26,8 +22,11 @@ import '../store_interfaces.dart';
   String asIso(Object v) {
     if (v is DateTime) return v.toUtc().toIso8601String();
     if (v is String) return v;
-    throw ArgumentError('updatedAt filter value must be DateTime or ISO String');
+    throw ArgumentError(
+      'updatedAt filter value must be DateTime or ISO String',
+    );
   }
+
   for (final f in spec.filters) {
     switch (f.field) {
       case 'id':
@@ -112,7 +111,9 @@ import '../store_interfaces.dart';
             break;
           case FilterOperator.inList:
             if (f.value is! List) {
-              throw ArgumentError('updatedAt inList expects List<DateTime|String>');
+              throw ArgumentError(
+                'updatedAt inList expects List<DateTime|String>',
+              );
             }
             final list = (f.value as List)
                 .map((e) => "${col}='${asIso(e)}'")
@@ -151,7 +152,9 @@ import '../store_interfaces.dart';
     final off = spec.offset!;
     final lim = spec.limit!;
     if (off % lim != 0) {
-      throw ArgumentError('PocketBase supports offset as multiples of limit only (via pages)');
+      throw ArgumentError(
+        'PocketBase supports offset as multiples of limit only (via pages)',
+      );
     }
     page = (off ~/ lim) + 1;
   }

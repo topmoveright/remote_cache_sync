@@ -27,19 +27,31 @@ void main() {
       ]);
 
       final spec = QuerySpec(
-        filters: const [FilterOp(field: 'id', op: FilterOperator.inList, value: ['a','c','d'])],
+        filters: const [
+          FilterOp(
+            field: 'id',
+            op: FilterOperator.inList,
+            value: ['a', 'c', 'd'],
+          ),
+        ],
         orderBy: const [OrderSpec('id', descending: true)],
         limit: 2,
         offset: 0,
       );
       final res = await store.queryWith(scope, spec);
-      expect(res.map((e) => e.id).toList(), ['d','c']);
+      expect(res.map((e) => e.id).toList(), ['d', 'c']);
 
       // pagination next page
       final res2 = await store.queryWith(
         scope,
         const QuerySpec(
-          filters: [FilterOp(field: 'id', op: FilterOperator.inList, value: ['a','c','d'])],
+          filters: [
+            FilterOp(
+              field: 'id',
+              op: FilterOperator.inList,
+              value: ['a', 'c', 'd'],
+            ),
+          ],
           orderBy: [OrderSpec('id', descending: true)],
           limit: 2,
           offset: 2,
@@ -54,20 +66,26 @@ void main() {
 
       final changed = await store.updateWhere(
         scope,
-        const QuerySpec(filters: [FilterOp(field: 'id', op: FilterOperator.eq, value: 'x')]),
+        const QuerySpec(
+          filters: [FilterOp(field: 'id', op: FilterOperator.eq, value: 'x')],
+        ),
         [R('x', now.add(const Duration(seconds: 1)))],
       );
       expect(changed, 1);
 
       final after = await store.queryWith(
         scope,
-        const QuerySpec(filters: [FilterOp(field: 'id', op: FilterOperator.eq, value: 'x')]),
+        const QuerySpec(
+          filters: [FilterOp(field: 'id', op: FilterOperator.eq, value: 'x')],
+        ),
       );
       expect(after.single.updatedAt.isAfter(now), isTrue);
 
       final deleted = await store.deleteWhere(
         scope,
-        const QuerySpec(filters: [FilterOp(field: 'id', op: FilterOperator.eq, value: 'y')]),
+        const QuerySpec(
+          filters: [FilterOp(field: 'id', op: FilterOperator.eq, value: 'y')],
+        ),
       );
       expect(deleted, 1);
       final remain = await store.query(scope);

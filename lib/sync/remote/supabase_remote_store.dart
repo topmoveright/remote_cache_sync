@@ -66,9 +66,8 @@ class SupabaseRemoteConfig<T, Id> {
   /// Optional runner to execute remoteSearch without hitting the network.
   /// When provided, `remoteSearch` will call this runner with the built plan
   /// and expect a list of raw row maps in return. This is primarily for tests.
-  final Future<List<Map<String, dynamic>>> Function(
-    SupabaseSearchRequest plan,
-  )? searchRunner;
+  final Future<List<Map<String, dynamic>>> Function(SupabaseSearchRequest plan)?
+  searchRunner;
 
   const SupabaseRemoteConfig({
     required this.client,
@@ -114,7 +113,7 @@ class SupabaseRemoteConfig<T, Id> {
     SyncScope? Function(T item)? scopeForUpsert,
     SyncScope? Function(Id id)? scopeForDelete,
     Future<List<Map<String, dynamic>>> Function(SupabaseSearchRequest plan)?
-        searchRunner,
+    searchRunner,
   }) {
     return SupabaseRemoteConfig<T, Id>(
       client: client ?? this.client,
@@ -139,7 +138,6 @@ class SupabaseRemoteConfig<T, Id> {
       searchRunner: searchRunner ?? this.searchRunner,
     );
   }
-
 }
 
 class SupabaseRemoteStore<T extends HasUpdatedAt, Id>

@@ -45,6 +45,7 @@ abstract interface class LocalStore<T, Id> {
 abstract interface class RemoteStore<T, Id> {
   Future<T?> getById(Id id);
   Future<Delta<T, Id>> fetchSince(SyncScope scope, DateTime? since);
+
   /// Search within a scope using a normalized query spec. Implementations should
   /// apply soft-delete semantics and only support operators and fields that are
   /// natively available on the backend. Unsupported operators/fields must throw

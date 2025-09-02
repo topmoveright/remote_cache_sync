@@ -131,7 +131,9 @@ class InMemoryRemoteStore<T extends HasUpdatedAt, Id>
             switch (f.op) {
               case FilterOperator.eq:
                 if (f.value is List) {
-                  final list = (f.value as List).map((e) => e.toString()).toList();
+                  final list = (f.value as List)
+                      .map((e) => e.toString())
+                      .toList();
                   if (!list.contains(id)) return false;
                 } else {
                   if (f.value is! String) {
@@ -150,7 +152,9 @@ class InMemoryRemoteStore<T extends HasUpdatedAt, Id>
                 if (f.value is! List) {
                   throw ArgumentError('id inList expects List<String>');
                 }
-                final list = (f.value as List).map((e) => e.toString()).toList();
+                final list = (f.value as List)
+                    .map((e) => e.toString())
+                    .toList();
                 if (!list.contains(id)) return false;
                 break;
               case FilterOperator.like:
@@ -165,43 +169,55 @@ class InMemoryRemoteStore<T extends HasUpdatedAt, Id>
             break;
           case 'updatedAt':
             final ts = item.updatedAt.toUtc();
-            DateTime asDt(Object v) => v is DateTime ? v.toUtc() : DateTime.parse(v.toString()).toUtc();
+            DateTime asDt(Object v) => v is DateTime
+                ? v.toUtc()
+                : DateTime.parse(v.toString()).toUtc();
             switch (f.op) {
               case FilterOperator.eq:
-                if (f.value == null) throw ArgumentError('updatedAt eq requires value');
+                if (f.value == null)
+                  throw ArgumentError('updatedAt eq requires value');
                 if (ts != asDt(f.value!)) return false;
                 break;
               case FilterOperator.neq:
-                if (f.value == null) throw ArgumentError('updatedAt neq requires value');
+                if (f.value == null)
+                  throw ArgumentError('updatedAt neq requires value');
                 if (ts == asDt(f.value!)) return false;
                 break;
               case FilterOperator.gt:
-                if (f.value == null) throw ArgumentError('updatedAt gt requires value');
+                if (f.value == null)
+                  throw ArgumentError('updatedAt gt requires value');
                 if (!(ts.isAfter(asDt(f.value!)))) return false;
                 break;
               case FilterOperator.gte:
-                if (f.value == null) throw ArgumentError('updatedAt gte requires value');
+                if (f.value == null)
+                  throw ArgumentError('updatedAt gte requires value');
                 final dt = asDt(f.value!);
                 if (!(ts.isAfter(dt) || ts.isAtSameMomentAs(dt))) return false;
                 break;
               case FilterOperator.lt:
-                if (f.value == null) throw ArgumentError('updatedAt lt requires value');
+                if (f.value == null)
+                  throw ArgumentError('updatedAt lt requires value');
                 if (!(ts.isBefore(asDt(f.value!)))) return false;
                 break;
               case FilterOperator.lte:
-                if (f.value == null) throw ArgumentError('updatedAt lte requires value');
+                if (f.value == null)
+                  throw ArgumentError('updatedAt lte requires value');
                 final dt = asDt(f.value!);
                 if (!(ts.isBefore(dt) || ts.isAtSameMomentAs(dt))) return false;
                 break;
               case FilterOperator.inList:
                 if (f.value is! List) {
-                  throw ArgumentError('updatedAt inList expects List<DateTime|String>');
+                  throw ArgumentError(
+                    'updatedAt inList expects List<DateTime|String>',
+                  );
                 }
                 final list = (f.value as List).map((e) => asDt(e)).toList();
                 if (!list.contains(ts)) return false;
                 break;
               default:
-                throw ArgumentError('Unsupported operator for updatedAt: ${f.op}');
+                throw ArgumentError(
+                  'Unsupported operator for updatedAt: ${f.op}',
+                );
             }
             break;
           default:
@@ -232,6 +248,7 @@ class InMemoryRemoteStore<T extends HasUpdatedAt, Id>
       }
       return 0;
     }
+
     if (spec.orderBy.isNotEmpty) {
       filtered.sort(cmp);
     }

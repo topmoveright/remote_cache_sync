@@ -23,7 +23,8 @@ void main() {
     late AppwriteRemoteStore<_Rec, String> store;
 
     setUp(() {
-      final databases = _DummyDatabases(); // searchRunner intercepts remoteSearch
+      final databases =
+          _DummyDatabases(); // searchRunner intercepts remoteSearch
       final cfg = AppwriteRemoteConfig<_Rec, String>(
         databases: databases,
         databaseId: 'db',
@@ -49,7 +50,9 @@ void main() {
         searchRunner: (queries) async {
           // Verify some query parts (either asc or desc present)
           expect(
-            queries.where((q) => q.contains('orderAsc') || q.contains('orderDesc')).isNotEmpty,
+            queries
+                .where((q) => q.contains('orderAsc') || q.contains('orderDesc'))
+                .isNotEmpty,
             isTrue,
           );
           expect(queries, anyElement(contains('limit')));
@@ -103,7 +106,9 @@ void main() {
         scopeNameField: 'scope_name',
       );
       expect(
-        queriesAsc.any((q) => q.contains('orderAsc') && q.contains('"attribute":"id"')),
+        queriesAsc.any(
+          (q) => q.contains('orderAsc') && q.contains('"attribute":"id"'),
+        ),
         isTrue,
       );
 
@@ -116,7 +121,9 @@ void main() {
         scopeNameField: 'scope_name',
       );
       expect(
-        queriesDesc.any((q) => q.contains('orderDesc') && q.contains('"attribute":"id"')),
+        queriesDesc.any(
+          (q) => q.contains('orderDesc') && q.contains('"attribute":"id"'),
+        ),
         isTrue,
       );
     });

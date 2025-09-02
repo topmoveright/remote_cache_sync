@@ -15,17 +15,18 @@ List<String> buildAppwriteRemoteSearchQueries({
   if (spec.offset != null && spec.limit == null) {
     throw ArgumentError('offset requires limit for remoteSearch (Appwrite)');
   }
-  final queries = <String>[
-    aw.Query.equal(scopeNameField, scope.name),
-  ];
+  final queries = <String>[aw.Query.equal(scopeNameField, scope.name)];
   if (deletedAtField != null) {
     queries.add(aw.Query.isNull(deletedAtField));
   }
   String asIso(Object v) {
     if (v is DateTime) return v.toUtc().toIso8601String();
     if (v is String) return v;
-    throw ArgumentError('updatedAt filter value must be DateTime or ISO String');
+    throw ArgumentError(
+      'updatedAt filter value must be DateTime or ISO String',
+    );
   }
+
   for (final f in spec.filters) {
     switch (f.field) {
       case 'id':
@@ -114,7 +115,9 @@ List<String> buildAppwriteRemoteSearchQueries({
             break;
           case FilterOperator.inList:
             if (f.value is! List) {
-              throw ArgumentError('updatedAt inList expects List<DateTime|String>');
+              throw ArgumentError(
+                'updatedAt inList expects List<DateTime|String>',
+              );
             }
             queries.add(
               aw.Query.equal(
@@ -135,7 +138,9 @@ List<String> buildAppwriteRemoteSearchQueries({
     switch (o.field) {
       case 'id':
         queries.add(
-          o.descending ? aw.Query.orderDesc(idField) : aw.Query.orderAsc(idField),
+          o.descending
+              ? aw.Query.orderDesc(idField)
+              : aw.Query.orderAsc(idField),
         );
         break;
       case 'updatedAt':

@@ -55,8 +55,11 @@ SupabaseSearchRequest buildSupabaseRemoteSearchRequest({
   String asIso(Object v) {
     if (v is DateTime) return v.toUtc().toIso8601String();
     if (v is String) return v;
-    throw ArgumentError('updatedAt filter value must be DateTime or ISO String');
+    throw ArgumentError(
+      'updatedAt filter value must be DateTime or ISO String',
+    );
   }
+
   for (final f in spec.filters) {
     switch (f.field) {
       case 'id':
@@ -78,8 +81,13 @@ SupabaseSearchRequest buildSupabaseRemoteSearchRequest({
             if (f.value is! List) {
               throw ArgumentError('id inList expects List<String>');
             }
-            filters.add(SupabaseQueryOp('in', col,
-                (f.value as List).map((e) => e.toString()).toList()));
+            filters.add(
+              SupabaseQueryOp(
+                'in',
+                col,
+                (f.value as List).map((e) => e.toString()).toList(),
+              ),
+            );
             break;
           case FilterOperator.like:
             if (f.value is! String) {
@@ -95,35 +103,48 @@ SupabaseSearchRequest buildSupabaseRemoteSearchRequest({
         final col = updatedAtColumn;
         switch (f.op) {
           case FilterOperator.eq:
-            if (f.value == null) throw ArgumentError('updatedAt eq requires value');
+            if (f.value == null)
+              throw ArgumentError('updatedAt eq requires value');
             filters.add(SupabaseQueryOp('eq', col, asIso(f.value!)));
             break;
           case FilterOperator.neq:
-            if (f.value == null) throw ArgumentError('updatedAt neq requires value');
+            if (f.value == null)
+              throw ArgumentError('updatedAt neq requires value');
             filters.add(SupabaseQueryOp('neq', col, asIso(f.value!)));
             break;
           case FilterOperator.gt:
-            if (f.value == null) throw ArgumentError('updatedAt gt requires value');
+            if (f.value == null)
+              throw ArgumentError('updatedAt gt requires value');
             filters.add(SupabaseQueryOp('gt', col, asIso(f.value!)));
             break;
           case FilterOperator.gte:
-            if (f.value == null) throw ArgumentError('updatedAt gte requires value');
+            if (f.value == null)
+              throw ArgumentError('updatedAt gte requires value');
             filters.add(SupabaseQueryOp('gte', col, asIso(f.value!)));
             break;
           case FilterOperator.lt:
-            if (f.value == null) throw ArgumentError('updatedAt lt requires value');
+            if (f.value == null)
+              throw ArgumentError('updatedAt lt requires value');
             filters.add(SupabaseQueryOp('lt', col, asIso(f.value!)));
             break;
           case FilterOperator.lte:
-            if (f.value == null) throw ArgumentError('updatedAt lte requires value');
+            if (f.value == null)
+              throw ArgumentError('updatedAt lte requires value');
             filters.add(SupabaseQueryOp('lte', col, asIso(f.value!)));
             break;
           case FilterOperator.inList:
             if (f.value is! List) {
-              throw ArgumentError('updatedAt inList expects List<DateTime|String>');
+              throw ArgumentError(
+                'updatedAt inList expects List<DateTime|String>',
+              );
             }
-            filters.add(SupabaseQueryOp('in', col,
-                (f.value as List).map((e) => asIso(e)).toList()));
+            filters.add(
+              SupabaseQueryOp(
+                'in',
+                col,
+                (f.value as List).map((e) => asIso(e)).toList(),
+              ),
+            );
             break;
           default:
             throw ArgumentError('Unsupported operator for updatedAt: ${f.op}');
@@ -141,7 +162,8 @@ SupabaseSearchRequest buildSupabaseRemoteSearchRequest({
         break;
       case 'updatedAt':
         orders.add(
-            SupabaseOrderSpecDto(updatedAtColumn, ascending: !o.descending));
+          SupabaseOrderSpecDto(updatedAtColumn, ascending: !o.descending),
+        );
         break;
       default:
         throw ArgumentError('Unsupported order field: ${o.field}');
