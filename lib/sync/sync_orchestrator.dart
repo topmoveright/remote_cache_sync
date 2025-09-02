@@ -14,6 +14,26 @@ abstract interface class SyncOrchestrator<T extends HasUpdatedAt, Id> {
 
   Future<List<T>> read(SyncScope scope, {CachePolicy policy});
 
+  /// Read with a normalized query spec through the orchestrator.
+  ///
+  /// Default behavior is cache-centric: synchronize first (for online policies)
+  /// and then evaluate the query against the local cache to keep results
+  /// consistent with offline reads.
+  ///
+  /// If [preferRemoteEval] is true, the orchestrator will try to evaluate the
+  /// query on the remote first (using `RemoteStore.remoteSearch`) and upsert
+  /// the results into local before returning the locally-evaluated result.
+  /// When the remote does not support certain operators/fields and throws
+  /// `ArgumentError`, the call will fall back to local (if [fallbackToLocal]
+  /// is true) after performing a synchronization.
+  Future<List<T>> readWith(
+    SyncScope scope,
+    QuerySpec spec, {
+    CachePolicy policy = CachePolicy.remoteFirst,
+    bool preferRemoteEval = false,
+    bool fallbackToLocal = true,
+  });
+
   /// When online, push pending ops, fetch delta, and merge into local.
   Future<void> synchronize(SyncScope scope);
 

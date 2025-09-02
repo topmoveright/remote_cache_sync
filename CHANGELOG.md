@@ -1,3 +1,7 @@
+[0.1.4]
+* Add readWith method to orchestrator for query spec evaluation
+* Add orchestrator-first quickstart with query evaluation examples
+
 [0.1.3]
 * Add sorting success tests for Appwrite, Supabase, PocketBase
 * Stabilize Appwrite success tests using dummy Databases to avoid MissingPluginException

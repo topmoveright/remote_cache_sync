@@ -3,3 +3,7 @@
 - Links
   - [GitHub](https://github.com/topmoveright/remote_cache_sync)
   - [Pub.dev](https://pub.dev/packages/remote_cache_sync)
+ - Orchestrator
+   - [Orchestrator Usage](/#/usage/orchestrator)
+   - [Interfaces](/#/usage/interfaces)
+   - [QuerySpec](/#/usage/query_spec)
