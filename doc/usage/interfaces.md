@@ -22,8 +22,33 @@ This page summarizes the core sync interfaces and common usage patterns in this 
 Required methods:
 - `query(scope)`, `querySince(scope, since)`: Scope-filtered reads.
 - `upsertMany(scope, items)`: Scope-aware upserts. Clearing tombstones on upsert is recommended.
-- `deleteMany(scope, ids)`: If `supportsSoftDelete` is true, mark deletions with `deletedAt`; otherwise hard delete.
+- `deleteMany(scope, ids)`: If `supportsSoftDelete` is true, mark deletions with `deletedAt` and keep rows.
 - Metadata: `getSyncPoint(scope)`, `saveSyncPoint(scope)`, pending `get/enqueue/clear` ops.
+
+### Cache management (approximate) 
+
+- `approxCacheSizeBytes({ SyncScope? scope })` → Future<int>
+  - Returns an approximate cache size in bytes for the whole store or a specific scope.
+  - Drift store sums UTF-8 byte lengths of relevant string payloads across `items`, `pendingOps`, and `syncPoints`.
+  - In-memory store uses a heuristic based on counts and fixed weights per entry type.
+- `setCacheSizeLimitBytes(int? bytes)` / `getCacheSizeLimitBytes()`
+  - Sets/gets the maximum cache size in bytes. `null` disables enforcement.
+  - Enforcement runs after write paths (e.g., `upsertMany`, `deleteMany`, and enqueue pending ops for in-memory) and removes data until the size is under the limit.
+  - Eviction policy: remove oldest tombstones first, then oldest active items by `updatedAt` (LRU-like by last update time).
+- `clearCache({ SyncScope? scope })`
+  - Clears cached data for the provided scope or for the entire store when omitted.
+  - Implementations also clear sync points and pending operations for cleared scopes.
+
+Example:
+
+```dart
+final scope = SyncScope('records', {'userId': 'u1'});
+final sizeBefore = await local.approxCacheSizeBytes(scope: scope);
+await local.setCacheSizeLimitBytes(200 * 1024); // ~200KB
+// Subsequent upserts/deletes may trigger eviction to respect the limit.
+await local.clearCache(scope: scope); // Clear only this scope
+await local.clearCache(); // Clear all scopes
+```
 
 Implementations:
 - `InMemoryLocalStore<T, Id>`: demo-only, not for production.

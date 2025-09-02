@@ -51,8 +51,9 @@ void main() {
     });
 
     test('upsert/query and soft delete behavior', () async {
-      final r1 = R('a', 'A', DateTime.now().toUtc());
-      final r2 = R('b', 'B', DateTime.now().toUtc());
+      // Use 2025 baseline year per project testing rule
+      final r1 = R('a', 'A', DateTime.utc(2025, 1, 1));
+      final r2 = R('b', 'B', DateTime.utc(2025, 1, 2));
       await store.upsertMany(scope, [r1, r2]);
 
       final list = await store.query(scope);
@@ -64,13 +65,17 @@ void main() {
       expect(after.map((e) => e.id), contains('b'));
 
       // querySince excludes deleted items
-      final since = DateTime.now().toUtc().subtract(const Duration(minutes: 1));
+      final since = DateTime.utc(
+        2025,
+        1,
+        1,
+      ).subtract(const Duration(minutes: 1));
       final sinceList = await store.querySince(scope, since);
       expect(sinceList.map((e) => e.id), isNot(contains('a')));
     });
 
     test('sync point is persisted', () async {
-      final ts = DateTime.now().toUtc();
+      final ts = DateTime.utc(2025, 2, 3, 4, 5, 6);
       await store.saveSyncPoint(scope, ts);
       final got = await store.getSyncPoint(scope);
       expect(got?.toIso8601String(), ts.toIso8601String());

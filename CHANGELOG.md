@@ -1,3 +1,6 @@
+[0.2.0]
+* Add cache size management with limit enforcement and clear operations
+
 [0.1.4]
 * Add readWith method to orchestrator for query spec evaluation
 * Add orchestrator-first quickstart with query evaluation examples

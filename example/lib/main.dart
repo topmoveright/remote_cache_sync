@@ -20,6 +20,8 @@ class _MyAppState extends State<MyApp> {
 
   final scope = const SyncScope('records', {'userId': 'u1'});
   List<Record> items = const [];
+  int _cacheSize = 0; // in bytes
+  int? _cacheLimit; // null means unlimited
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _MyAppState extends State<MyApp> {
       idOf: (r) => r.id,
     );
     _refresh();
+    _refreshCacheMeta();
   }
 
   Future<void> _refresh() async {
@@ -67,6 +70,7 @@ class _MyAppState extends State<MyApp> {
     );
     await orchestrator.enqueueCreate(scope, id, rec);
     await _refresh();
+    await _refreshCacheMeta();
   }
 
   Future<void> _updateFirst() async {
@@ -79,17 +83,50 @@ class _MyAppState extends State<MyApp> {
     );
     await orchestrator.enqueueUpdate(scope, first.id, rec);
     await _refresh();
+    await _refreshCacheMeta();
   }
 
   Future<void> _deleteFirst() async {
     if (items.isEmpty) return;
     await orchestrator.enqueueDelete(scope, items.first.id);
     await _refresh();
+    await _refreshCacheMeta();
   }
 
   Future<void> _sync() async {
     await orchestrator.synchronize(scope);
     await _refresh();
+    await _refreshCacheMeta();
+  }
+
+  // Cache management helpers
+  Future<void> _refreshCacheMeta() async {
+    final size = await local.approxCacheSizeBytes();
+    final limit = await local.getCacheSizeLimitBytes();
+    if (mounted) {
+      setState(() {
+        _cacheSize = size;
+        _cacheLimit = limit;
+      });
+    }
+  }
+
+  Future<void> _setLimit(int? bytes) async {
+    await local.setCacheSizeLimitBytes(bytes);
+    await _refresh();
+    await _refreshCacheMeta();
+  }
+
+  Future<void> _clearScope() async {
+    await local.clearCache(scope: scope);
+    await _refresh();
+    await _refreshCacheMeta();
+  }
+
+  Future<void> _clearAll() async {
+    await local.clearCache();
+    await _refresh();
+    await _refreshCacheMeta();
   }
 
   @override
@@ -115,6 +152,42 @@ class _MyAppState extends State<MyApp> {
               ],
             ),
             const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Cache size: \\${_cacheSize} B'),
+                  Text('Limit: \\${_cacheLimit?.toString() ?? 'unlimited'}'),
+                  const SizedBox(height: 8),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.start,
+                    spacing: 8,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => _setLimit(200 * 1024),
+                        child: const Text('Set 200KB Limit'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => _setLimit(null),
+                        child: const Text('Remove Limit'),
+                      ),
+                      ElevatedButton(
+                        onPressed: _clearScope,
+                        child: const Text('Clear Scope'),
+                      ),
+                      ElevatedButton(
+                        onPressed: _clearAll,
+                        child: const Text('Clear All'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: ListView.builder(
                 itemCount: items.length,
