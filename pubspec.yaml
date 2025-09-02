@@ -1,6 +1,6 @@
 name: remote_cache_sync
 description: "Remote cache synchronization toolkit for Flutter with Appwrite, PocketBase, and Supabase adapters."
-version: 0.1.3
+version: 0.1.4
 homepage: https://topmoveright.github.io/remote_cache_sync
 repository: https://github.com/topmoveright/remote_cache_sync
 issue_tracker: https://github.com/topmoveright/remote_cache_sync/issues
