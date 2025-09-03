@@ -11,7 +11,7 @@ class _Rec implements HasUpdatedAt {
   const _Rec(this.id, this.title, this.updatedAt);
 }
 
-class _FakeDatabases implements aw.Databases {
+class _FakeTablesDB implements aw.TablesDB {
   // Minimal fake to satisfy type, methods unused in helper tests
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -24,12 +24,12 @@ void main() {
     late AppwriteRemoteStore<_Rec, String> store;
 
     setUp(() {
-      final databases = _FakeDatabases();
+      final tablesDB = _FakeTablesDB();
       final config = AppwriteRemoteConfig<_Rec, String>(
-        databases: databases,
+        tablesDB: tablesDB,
         functions: null,
         databaseId: 'db',
-        collectionId: 'col',
+        tableId: 'col',
         idField: 'id',
         updatedAtField: 'updated_at',
         deletedAtField: 'deleted_at',
@@ -62,10 +62,10 @@ void main() {
         skippedAcc = 0;
         storeWithHook = AppwriteRemoteStore<_Rec, String>(
           config: AppwriteRemoteConfig<_Rec, String>(
-            databases: _FakeDatabases(),
+            tablesDB: _FakeTablesDB(),
             functions: null,
             databaseId: 'db',
-            collectionId: 'col',
+            tableId: 'col',
             idField: 'id',
             updatedAtField: 'updated_at',
             deletedAtField: 'deleted_at',

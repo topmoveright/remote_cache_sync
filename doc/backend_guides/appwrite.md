@@ -2,28 +2,29 @@
 
 This guide complements the `AppwriteRemoteStore` adapter. Replace placeholders with your schema names.
 
-## Recommended Schema
+## Recommended Schema (TablesDB, Appwrite v18+)
 
-- Collection: `<your_collection>` in database `<your_database_id>`
+- Table: `<your_table_id>` in database `<your_database_id>`
 - Fields
-  - `<id_field>`: string (unique). Stored as the document id (custom id).
+  - `<id_field>`: string (unique). Stored as the row id (custom id).
   - `title` or your domain fields.
   - `<updated_at_field>`: string datetime (ISO8601, server-managed if possible).
   - `<deleted_at_field>`: string datetime (nullable) for soft delete. Omit to use hard delete.
   - `<scope_name_field>`: string (e.g., "tenant", "workspace").
   - `<scope_keys_field>`: object/JSON (key-value pairs).
 
-## Indexing
+## Indexing & Querying
 
 Create indexes on frequently filtered/sorted fields:
 - `equal(<scope_name_field>)`
-- `greaterThan(<updated_at_field>)` and `orderBy(<updated_at_field>)`
-- `equal(<id_field>)` (if not using document id itself)
+- `greaterThan(<updated_at_field>)` and ordering on `<updated_at_field>`
+- `equal(<id_field>)` (if not using row id itself)
 - If you need to filter by a scope key, consider denormalizing it into a separate field with its own index (e.g., `scope_userId`).
 
-Practical tips:
+Practical tips (TablesDB adapter):
 - Prefer `string` for `<updated_at_field>` storing ISO8601; ensure uniform UTC format for correct lexicographic ordering.
 - If you filter by multiple scope keys, denormalize the most selective key(s) into dedicated indexed fields.
+ - Remote search and sync use Appwrite TablesDB queries (e.g., `listRows`) with `Query.equal`, `Query.greaterThan`, `Query.orderAsc/Desc`, `Query.limit`, and cursors.
 
 ## Permissions & Security Checklist
 
@@ -71,3 +72,13 @@ Ensure the server trusts these values or overrides them with its own logic based
 
 - Filtering by nested keys in `<scope_keys_field>` may be limited. Prefer denormalized fields for search and indexing.
 - For high-throughput sync, consider batching via a Cloud Function that accepts arrays and performs multiple mutations server-side.
+
+## API Mapping Cheat Sheet
+
+- Read single: `tablesDB.getRow(databaseId, tableId, rowId)`
+- List/paginate: `tablesDB.listRows(databaseId, tableId, queries: [...])`
+- Create: `tablesDB.createRow(databaseId, tableId, rowId, data)`
+- Update: `tablesDB.updateRow(databaseId, tableId, rowId, data)`
+- Delete (hard): `tablesDB.deleteRow(databaseId, tableId, rowId)`
+
+The adapter’s `AppwriteRemoteStore` composes these under the hood and handles pagination, cursoring, and optional soft delete via `<deleted_at_field>`.

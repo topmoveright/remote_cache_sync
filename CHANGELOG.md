@@ -1,3 +1,6 @@
+[0.2.1]
+* Migrate Appwrite adapter from Databases API to TablesDB (v18+)
+
 [0.2.0]
 * Add cache size management with limit enforcement and clear operations
 

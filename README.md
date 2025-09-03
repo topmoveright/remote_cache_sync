@@ -13,8 +13,8 @@ Remote Cache Sync lets you manage remote data via a single cache-first query API
 
 ```yaml
 dependencies:
-  remote_cache_sync: ^0.1.4
-  supabase_flutter: ^2.6.0
+  remote_cache_sync:
+  supabase_flutter:
 ```
 
 ```dart

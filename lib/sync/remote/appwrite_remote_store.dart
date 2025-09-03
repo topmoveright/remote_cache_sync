@@ -13,12 +13,12 @@ import 'appwrite_search_plan.dart';
 /// placeholders and should be replaced with your schema.
 class AppwriteRemoteConfig<T extends HasUpdatedAt, Id> {
   // Low-level clients
-  final aw.Databases databases;
+  final aw.TablesDB tablesDB;
   final aw.Functions? functions;
 
-  // Database/collection identification
+  // Database/table identification
   final String databaseId;
-  final String collectionId; // <your_collection>
+  final String tableId; // <your_table>
 
   // Field mappings
   final String idField; // <id_field>
@@ -52,10 +52,10 @@ class AppwriteRemoteConfig<T extends HasUpdatedAt, Id> {
   searchRunner;
 
   const AppwriteRemoteConfig({
-    required this.databases,
+    required this.tablesDB,
     this.functions,
     required this.databaseId,
-    required this.collectionId,
+    required this.tableId,
     required this.idField,
     required this.updatedAtField,
     required this.deletedAtField,
@@ -83,12 +83,12 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
   @override
   Future<T?> getById(Id id) async {
     try {
-      final doc = await config.databases.getDocument(
+      final row = await config.tablesDB.getRow(
         databaseId: config.databaseId,
-        collectionId: config.collectionId,
-        documentId: config.idToString(id),
+        tableId: config.tableId,
+        rowId: config.idToString(id),
       );
-      final data = Map<String, dynamic>.from(doc.data);
+      final data = Map<String, dynamic>.from(row.data);
       return config.fromJson(data);
     } on aw.AppwriteException {
       // Not found or other error
@@ -184,9 +184,9 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
     String? cursor;
     const limit = 100;
     while (true) {
-      final res = await config.databases.listDocuments(
+      final res = await config.tablesDB.listRows(
         databaseId: config.databaseId,
-        collectionId: config.collectionId,
+        tableId: config.tableId,
         queries: [
           ...queries,
           if (cursor != null) aw.Query.cursorAfter(cursor),
@@ -194,25 +194,25 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
           aw.Query.orderAsc(config.updatedAtField),
         ],
       );
-      for (final d in res.documents) {
-        final data = Map<String, dynamic>.from(d.data);
+      for (final r in res.rows) {
+        final data = Map<String, dynamic>.from(r.data);
         final isDeleted =
             config.deletedAtField != null &&
             data[config.deletedAtField!] != null;
         if (isDeleted) {
-          deletes.add(config.idFromString(d.$id));
+          deletes.add(config.idFromString(r.$id));
         } else {
           upserts.add(config.fromJson(data));
         }
       }
-      if (res.total <= (res.documents.length + (cursor == null ? 0 : limit))) {
+      if (res.total <= (res.rows.length + (cursor == null ? 0 : limit))) {
         // Heuristic: stop when we've likely reached the end. Appwrite doesn't return a next cursor; we can break when page shorter than limit.
-        if (res.documents.length < limit) {
+        if (res.rows.length < limit) {
           break;
         }
       }
-      if (res.documents.isEmpty) break;
-      cursor = res.documents.last.$id;
+      if (res.rows.isEmpty) break;
+      cursor = res.rows.last.$id;
     }
 
     final serverTs = await getServerTime();
@@ -267,18 +267,18 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
       final data = entry.$2;
       try {
         // Try update first
-        await config.databases.updateDocument(
+        await config.tablesDB.updateRow(
           databaseId: config.databaseId,
-          collectionId: config.collectionId,
-          documentId: id,
+          tableId: config.tableId,
+          rowId: id,
           data: data,
         );
       } on aw.AppwriteException catch (_) {
         // Create if not exists
-        await config.databases.createDocument(
+        await config.tablesDB.createRow(
           databaseId: config.databaseId,
-          collectionId: config.collectionId,
-          documentId: id, // custom id to align with our domain id
+          tableId: config.tableId,
+          rowId: id, // custom id to align with our domain id
           data: data,
         );
       }
@@ -304,10 +304,10 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
           patch.addAll(scopeMap);
         }
         try {
-          await config.databases.updateDocument(
+          await config.tablesDB.updateRow(
             databaseId: config.databaseId,
-            collectionId: config.collectionId,
-            documentId: docId,
+            tableId: config.tableId,
+            rowId: docId,
             data: patch,
           );
         } on aw.AppwriteException {
@@ -315,10 +315,10 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
         }
       } else {
         try {
-          await config.databases.deleteDocument(
+          await config.tablesDB.deleteRow(
             databaseId: config.databaseId,
-            collectionId: config.collectionId,
-            documentId: docId,
+            tableId: config.tableId,
+            rowId: docId,
           );
         } on aw.AppwriteException {
           // ignore
@@ -378,13 +378,13 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
           .map((e) => config.fromJson(Map<String, dynamic>.from(e)))
           .toList(growable: false);
     }
-    final res = await config.databases.listDocuments(
+    final res = await config.tablesDB.listRows(
       databaseId: config.databaseId,
-      collectionId: config.collectionId,
+      tableId: config.tableId,
       queries: queries,
     );
-    return res.documents
-        .map((d) => config.fromJson(Map<String, dynamic>.from(d.data)))
+    return res.rows
+        .map((r) => config.fromJson(Map<String, dynamic>.from(r.data)))
         .toList(growable: false);
   }
 

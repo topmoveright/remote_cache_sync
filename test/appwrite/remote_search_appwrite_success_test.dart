@@ -11,8 +11,8 @@ class _Rec implements HasUpdatedAt {
   const _Rec(this.id, this.title, this.updatedAt);
 }
 
-// Dummy databases to avoid initializing real Appwrite client in tests
-class _DummyDatabases implements aw.Databases {
+// Dummy TablesDB to avoid initializing real Appwrite client in tests
+class _DummyTablesDB implements aw.TablesDB {
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -23,12 +23,11 @@ void main() {
     late AppwriteRemoteStore<_Rec, String> store;
 
     setUp(() {
-      final databases =
-          _DummyDatabases(); // searchRunner intercepts remoteSearch
+      final tablesDB = _DummyTablesDB(); // searchRunner intercepts remoteSearch
       final cfg = AppwriteRemoteConfig<_Rec, String>(
-        databases: databases,
+        tablesDB: tablesDB,
         databaseId: 'db',
-        collectionId: 'col',
+        tableId: 'col',
         idField: 'id',
         updatedAtField: 'updated',
         deletedAtField: 'deleted_at',

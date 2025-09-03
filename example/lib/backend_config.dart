@@ -38,14 +38,14 @@ RemoteStore<Record, String> createRemoteStore() {
       //   ..setEndpoint('<your_appwrite_endpoint>')
       //   ..setProject('<your_project_id>')
       //   ..setKey('<your_api_key>');
-      // final databases = aw.Databases(client);
+      // final tablesDB = aw.TablesDB(client); // Appwrite v18+ Tables API
       // final functions = aw.Functions(client);
       // return AppwriteRemoteStore<Record, String>(
       //   config: AppwriteRemoteConfig<Record, String>(
-      //     databases: databases,
+      //     tablesDB: tablesDB,
       //     functions: functions,
       //     databaseId: '<your_database_id>',
-      //     collectionId: '<your_collection>',
+      //     tableId: '<your_table_id>',
       //     idField: '<id_field>',
       //     updatedAtField: '<updated_at_field>',
       //     deletedAtField: '<deleted_at_field>',

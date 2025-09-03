@@ -3,7 +3,7 @@ import 'package:remote_cache_sync/remote_cache_sync.dart';
 import 'package:remote_cache_sync/remote_cache_sync_adapters.dart';
 import 'package:appwrite/appwrite.dart' as aw;
 
-class _DummyDatabases implements aw.Databases {
+class _DummyTablesDB implements aw.TablesDB {
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -12,12 +12,12 @@ void main() {
   test(
     'Appwrite remoteSearch throws when offset provided without limit',
     () async {
-      final db = _DummyDatabases();
+      final db = _DummyTablesDB();
       final store = AppwriteRemoteStore<MapRecord, String>(
         config: AppwriteRemoteConfig<MapRecord, String>(
-          databases: db,
+          tablesDB: db,
           databaseId: 'db',
-          collectionId: 'col',
+          tableId: 'col',
           idField: 'id',
           updatedAtField: 'updated_at',
           deletedAtField: 'deleted_at',
@@ -42,12 +42,12 @@ void main() {
   );
 
   test('Appwrite remoteSearch throws on unsupported filter field', () async {
-    final db = _DummyDatabases();
+    final db = _DummyTablesDB();
     final store = AppwriteRemoteStore<MapRecord, String>(
       config: AppwriteRemoteConfig<MapRecord, String>(
-        databases: db,
+        tablesDB: db,
         databaseId: 'db',
-        collectionId: 'col',
+        tableId: 'col',
         idField: 'id',
         updatedAtField: 'updated_at',
         deletedAtField: 'deleted_at',
@@ -69,12 +69,12 @@ void main() {
   });
 
   test('Appwrite remoteSearch throws on unsupported order field', () async {
-    final db = _DummyDatabases();
+    final db = _DummyTablesDB();
     final store = AppwriteRemoteStore<MapRecord, String>(
       config: AppwriteRemoteConfig<MapRecord, String>(
-        databases: db,
+        tablesDB: db,
         databaseId: 'db',
-        collectionId: 'col',
+        tableId: 'col',
         idField: 'id',
         updatedAtField: 'updated_at',
         deletedAtField: 'deleted_at',
@@ -96,12 +96,12 @@ void main() {
   test(
     'Appwrite remoteSearch throws on invalid updatedAt value type',
     () async {
-      final db = _DummyDatabases();
+      final db = _DummyTablesDB();
       final store = AppwriteRemoteStore<MapRecord, String>(
         config: AppwriteRemoteConfig<MapRecord, String>(
-          databases: db,
+          tablesDB: db,
           databaseId: 'db',
-          collectionId: 'col',
+          tableId: 'col',
           idField: 'id',
           updatedAtField: 'updated_at',
           deletedAtField: 'deleted_at',
