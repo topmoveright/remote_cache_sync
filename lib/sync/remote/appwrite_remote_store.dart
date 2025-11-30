@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:appwrite/appwrite.dart' as aw;
 import 'package:remote_cache_sync/sync/store_interfaces.dart';
@@ -165,7 +166,14 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
 
     return rows.where((m) {
       final nameOk = m[config.scopeNameField] == scope.name;
-      final keysVal = m[config.scopeKeysField];
+      var keysVal = m[config.scopeKeysField];
+      if (keysVal is String) {
+        try {
+          keysVal = jsonDecode(keysVal);
+        } catch (_) {
+          // ignore, treat as mismatch or empty
+        }
+      }
       final keysOk =
           keysVal is Map &&
           shallowMapEquals(Map<String, dynamic>.from(keysVal), scope.keys);
@@ -299,7 +307,7 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
               config.scopeFieldsBuilder?.call(config.defaultScope!) ??
               {
                 config.scopeNameField: config.defaultScope!.name,
-                config.scopeKeysField: config.defaultScope!.keys,
+                config.scopeKeysField: jsonEncode(config.defaultScope!.keys),
               };
           patch.addAll(scopeMap);
         }
@@ -359,7 +367,7 @@ class AppwriteRemoteStore<T extends HasUpdatedAt, Id>
             config.scopeFieldsBuilder?.call(config.defaultScope!) ??
             {
               config.scopeNameField: config.defaultScope!.name,
-              config.scopeKeysField: config.defaultScope!.keys,
+              config.scopeKeysField: jsonEncode(config.defaultScope!.keys),
             };
         data.addAll(scopeMap);
       }
