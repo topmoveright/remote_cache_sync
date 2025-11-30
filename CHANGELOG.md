@@ -1,3 +1,6 @@
+[0.2.2]
+* AppwriteRemoteStore serializes scope keys as JSON strings for storage and adds tests for this behavior.
+
 [0.2.1]
 * Migrate Appwrite adapter from Databases API to TablesDB (v18+)
 
